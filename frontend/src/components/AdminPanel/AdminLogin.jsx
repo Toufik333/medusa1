@@ -122,3 +122,4 @@ export default function AdminLogin({ onLogin, onReturnToStore, showToast }) {
     </div>
   );
 }
+
