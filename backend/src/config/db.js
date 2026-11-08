@@ -30,3 +30,4 @@ module.exports = {
     throw new Error('PostgreSQL pool not initialized.');
   }
 };
+

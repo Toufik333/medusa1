@@ -37,3 +37,4 @@ export default function ProductImageFrame({ src, alt, cropMeta, badge, featured 
     </div>
   );
 }
+

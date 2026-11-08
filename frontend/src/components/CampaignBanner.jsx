@@ -41,3 +41,4 @@ export default function CampaignBanner({ campaign, onApplyCoupon }) {
     </div>
   );
 }
+

@@ -13,3 +13,4 @@ router.patch('/admin/:id/toggle', couponController.toggleCouponActive);
 router.delete('/admin/:id', couponController.deleteCoupon);
 
 module.exports = router;
+

@@ -134,3 +134,4 @@ module.exports = {
   initPostgres,
   memoryStore
 };
+

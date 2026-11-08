@@ -10,3 +10,4 @@ router.put('/admin', campaignController.updateCampaign);
 router.patch('/admin/toggle', campaignController.toggleCampaign);
 
 module.exports = router;
+

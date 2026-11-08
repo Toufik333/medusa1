@@ -11,3 +11,4 @@ router.get('/admin/all', orderController.getOrders);
 router.patch('/admin/:id/status', orderController.updateOrderStatus);
 
 module.exports = router;
+

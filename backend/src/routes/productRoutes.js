@@ -13,3 +13,4 @@ router.patch('/admin/:id/featured', productController.toggleFeatured);
 router.delete('/admin/:id', productController.deleteProduct);
 
 module.exports = router;
+
