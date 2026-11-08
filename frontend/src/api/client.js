@@ -3,20 +3,49 @@
 
 const API_BASE = import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace(/\/$/, '') : '';
 
+export const authStorage = {
+  getToken: () => localStorage.getItem('admin_token'),
+  setToken: (token) => localStorage.setItem('admin_token', token),
+  removeToken: () => localStorage.removeItem('admin_token'),
+  getAdmin: () => {
+    try {
+      const data = localStorage.getItem('admin_profile');
+      return data ? JSON.parse(data) : null;
+    } catch {
+      return null;
+    }
+  },
+  setAdmin: (admin) => localStorage.setItem('admin_profile', JSON.stringify(admin)),
+  removeAdmin: () => localStorage.removeItem('admin_profile')
+};
+
 async function fetchJson(endpoint, options = {}) {
   const url = `${API_BASE}${endpoint}`;
+  const token = authStorage.getToken();
+
+  const headers = {
+    'Content-Type': 'application/json',
+    ...(options.headers || {})
+  };
+
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
   try {
     const res = await fetch(url, {
       ...options,
-      headers: {
-        'Content-Type': 'application/json',
-        ...(options.headers || {})
-      }
+      headers
     });
 
     const data = await res.json().catch(() => null);
 
     if (!res.ok) {
+      if (res.status === 401 && endpoint.includes('/admin/')) {
+        // Token expired or invalid
+        authStorage.removeToken();
+        authStorage.removeAdmin();
+      }
       const errorMsg = data?.error || data?.message || `HTTP ${res.status}: ${res.statusText}`;
       throw new Error(errorMsg);
     }
@@ -28,6 +57,26 @@ async function fetchJson(endpoint, options = {}) {
 }
 
 export const api = {
+  // Admin Authentication
+  adminLogin: async (email, password) => {
+    const res = await fetchJson('/api/admin/login', {
+      method: 'POST',
+      body: JSON.stringify({ email, password })
+    });
+    if (res.data?.token) {
+      authStorage.setToken(res.data.token);
+      authStorage.setAdmin(res.data.admin);
+    }
+    return res;
+  },
+
+  adminGetMe: () => fetchJson('/api/admin/me'),
+
+  adminLogout: () => {
+    authStorage.removeToken();
+    authStorage.removeAdmin();
+  },
+
   // Health
   checkHealth: () => fetchJson('/api/health'),
 
@@ -104,4 +153,3 @@ export const api = {
   // bKash (Reserved)
   getBkashStatus: (orderId) => fetchJson(`/api/payments/bkash/status/${orderId}`)
 };
-

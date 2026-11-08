@@ -1,14 +1,14 @@
 const express = require('express');
 const router = express.Router();
 const orderController = require('../controllers/orderController');
+const { requireAdminAuth } = require('../config/auth');
 
-// Customer checkout route
+// Public Customer checkout routes
 router.post('/', orderController.createOrder);
 router.get('/:id', orderController.getOrderById);
 
-// Admin routes
-router.get('/admin/all', orderController.getOrders);
-router.patch('/admin/:id/status', orderController.updateOrderStatus);
+// Protected Admin routes
+router.get('/admin/all', requireAdminAuth, orderController.getOrders);
+router.patch('/admin/:id/status', requireAdminAuth, orderController.updateOrderStatus);
 
 module.exports = router;
-

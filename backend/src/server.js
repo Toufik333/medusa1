@@ -4,7 +4,9 @@ require('dotenv').config();
 
 const db = require('./config/db');
 const { initPostgres } = require('./db/initDb');
+const { getAdminsFromEnv } = require('./config/auth');
 
+const authRoutes = require('./routes/authRoutes');
 const productRoutes = require('./routes/productRoutes');
 const couponRoutes = require('./routes/couponRoutes');
 const campaignRoutes = require('./routes/campaignRoutes');
@@ -17,11 +19,9 @@ const app = express();
 const allowedOrigin = process.env.ALLOWED_ORIGIN || '*';
 app.use(cors({
   origin: (origin, callback) => {
-    // Allow requests with no origin (like mobile apps, curl, or same-origin)
     if (!origin || allowedOrigin === '*' || origin === allowedOrigin) {
       return callback(null, true);
     }
-    // Allow vercel preview / production URLs
     if (origin.includes('.vercel.app') || origin.includes('localhost') || origin.includes('127.0.0.1')) {
       return callback(null, true);
     }
@@ -38,20 +38,24 @@ app.use(express.urlencoded({ extended: true, limit: '15mb' }));
 
 // 3. API Healthcheck
 app.get('/api/health', (req, res) => {
+  const admins = getAdminsFromEnv();
   res.json({
     status: 'healthy',
     timestamp: new Date().toISOString(),
     database: db.isPostgres() ? 'PostgreSQL (Active)' : 'In-Memory / Fallback Mode (Demo Data)',
+    configuredAdminsCount: admins.length,
     features: {
       cashOnDelivery: 'ACTIVE',
       bkashGatewaySlot: 'RESERVED',
       clothingConditionalSizes: 'ACTIVE',
-      uniform4x5Cropper: 'ACTIVE'
+      uniform4x5Cropper: 'ACTIVE',
+      adminSecurityPortal: 'ACTIVE'
     }
   });
 });
 
 // 4. Mount API Routes
+app.use('/api/admin', authRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/coupons', couponRoutes);
 app.use('/api/campaign', campaignRoutes);
@@ -76,16 +80,18 @@ async function startServer() {
   if (db.isPostgres()) {
     await initPostgres();
   }
-  
+
+  const admins = getAdminsFromEnv();
+
   app.listen(PORT, () => {
     console.log(`=======================================================`);
     console.log(`🚀 Store Backend running on port ${PORT}`);
     console.log(`📡 Healthcheck: http://localhost:${PORT}/api/health`);
     console.log(`📦 Database: ${db.isPostgres() ? 'PostgreSQL (Connected)' : 'In-Memory Mode (Demo Preloaded)'}`);
+    console.log(`🔐 Admin Auth: ${admins.length} authorized admin(s) loaded from environment`);
     console.log(`💳 Payments: Cash on Delivery [Active] | bKash [Reserved]`);
     console.log(`=======================================================`);
   });
 }
 
 startServer();
-

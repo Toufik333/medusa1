@@ -7,15 +7,20 @@ import {
   Server,
   ShieldCheck,
   Sparkles,
-  Crop
+  Crop,
+  LogOut,
+  ExternalLink,
+  Lock,
+  UserCheck
 } from 'lucide-react';
-import { api } from './api/client';
+import { api, authStorage } from './api/client';
 import Navbar from './components/Navbar';
 import CampaignBanner from './components/CampaignBanner';
 import FeaturedBoard from './components/FeaturedBoard';
 import ProductCard from './components/ProductCard';
 import CartDrawer from './components/CartDrawer';
 import Toast from './components/Toast';
+import AdminLogin from './components/AdminPanel/AdminLogin';
 import ProductManager from './components/AdminPanel/ProductManager';
 import CouponManager from './components/AdminPanel/CouponManager';
 import CampaignManager from './components/AdminPanel/CampaignManager';
@@ -46,7 +51,7 @@ const INITIAL_PRODUCTS = [
     discountPrice: 3800,
     isClothing: false,
     category: 'Gear',
-    sizes: [], // Non-clothing: strictly empty
+    sizes: [],
     featured: true,
     stock: 15,
     imageUrl: 'https://images.unsplash.com/photo-1553062407-98eeb64c6a62?auto=format&fit=crop&w=900&q=85',
@@ -146,8 +151,15 @@ const INITIAL_ORDERS = [
 ];
 
 export default function App() {
-  // Navigation & View Modes
-  const [viewMode, setViewMode] = useState('storefront'); // 'storefront' | 'admin'
+  // Path-based Routing: '/' or '/admin'
+  const [currentPath, setCurrentPath] = useState(window.location.pathname);
+  const isAdminRoute = currentPath.startsWith('/admin');
+
+  // Admin Auth State
+  const [adminUser, setAdminUser] = useState(() => authStorage.getAdmin());
+  const [isAuthenticated, setIsAuthenticated] = useState(() => Boolean(authStorage.getToken()));
+
+  // Admin Tab Navigation
   const [adminTab, setAdminTab] = useState('products'); // 'products' | 'coupons' | 'campaign' | 'orders' | 'backend'
 
   // Application Data States
@@ -159,7 +171,7 @@ export default function App() {
   // Storefront Filtering & Sizing
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
-  const [selectedSizes, setSelectedSizes] = useState({}); // { [productId]: 'M' }
+  const [selectedSizes, setSelectedSizes] = useState({});
   const [sizePromptError, setSizePromptError] = useState(null);
 
   // Cart & Checkout
@@ -192,13 +204,25 @@ export default function App() {
     }, 3200);
   };
 
-  // Load initial data from backend API
+  // Sync browser URL on popstate
+  useEffect(() => {
+    const handlePopState = () => setCurrentPath(window.location.pathname);
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  const navigateTo = (path) => {
+    window.history.pushState({}, '', path);
+    setCurrentPath(path);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  // Fetch initial data
   const refreshData = async () => {
-    const [prodRes, coupRes, campRes, ordRes] = await Promise.all([
+    const [prodRes, coupRes, campRes] = await Promise.all([
       api.getProducts(),
-      api.getCoupons(),
-      api.getCampaign(),
-      api.getOrders()
+      api.getActiveCoupons(),
+      api.getCampaign()
     ]);
 
     if (prodRes.data && Array.isArray(prodRes.data) && prodRes.data.length > 0) {
@@ -210,14 +234,25 @@ export default function App() {
     if (campRes.data) {
       setCampaign(campRes.data);
     }
-    if (ordRes.data && Array.isArray(ordRes.data)) {
-      setOrders(ordRes.data);
+
+    // If authenticated, also fetch protected admin orders and all coupons
+    if (isAuthenticated) {
+      const [ordRes, allCoupRes] = await Promise.all([
+        api.getOrders(),
+        api.getCoupons()
+      ]);
+      if (ordRes.data && Array.isArray(ordRes.data)) {
+        setOrders(ordRes.data);
+      }
+      if (allCoupRes.data && Array.isArray(allCoupRes.data)) {
+        setCoupons(allCoupRes.data);
+      }
     }
   };
 
   useEffect(() => {
     refreshData();
-  }, []);
+  }, [isAuthenticated]);
 
   // When admin toggles coupon active/inactive, sync applied coupon in cart
   useEffect(() => {
@@ -252,6 +287,32 @@ export default function App() {
   const featuredProducts = useMemo(() => {
     return products.filter((p) => p.featured);
   }, [products]);
+
+  // Authentication Handlers
+  const handleAdminLogin = async (email, password) => {
+    const res = await api.adminLogin(email, password);
+    if (res.data?.token) {
+      setIsAuthenticated(true);
+      setAdminUser(res.data.admin);
+      showToast(`Welcome back, ${res.data.admin.name}!`);
+      // Refresh protected data
+      const [ordRes, allCoupRes] = await Promise.all([
+        api.getOrders(),
+        api.getCoupons()
+      ]);
+      if (ordRes.data) setOrders(ordRes.data);
+      if (allCoupRes.data) setCoupons(allCoupRes.data);
+      return { success: true };
+    }
+    return { success: false, error: res.error || 'Invalid admin credentials' };
+  };
+
+  const handleAdminLogout = () => {
+    api.adminLogout();
+    setIsAuthenticated(false);
+    setAdminUser(null);
+    showToast('Signed out of admin portal');
+  };
 
   // Cart operations
   const handleAddToCart = (product) => {
@@ -314,7 +375,6 @@ export default function App() {
     const raw = (codeToApply ?? couponInput).trim().toUpperCase();
     if (!raw) return;
 
-    // First validate via backend
     const res = await api.validateCoupon(raw);
     if (res.data) {
       setAppliedCoupon(res.data);
@@ -327,7 +387,6 @@ export default function App() {
       return;
     }
 
-    // Local fallback check if backend unreachable
     const matched = coupons.find((c) => c.code.toUpperCase() === raw);
     if (!matched) {
       setAppliedCoupon(null);
@@ -349,7 +408,7 @@ export default function App() {
     showToast(`Applied ${matched.code} (${matched.discountPercent}% OFF)`);
   };
 
-  // Order Placement
+  // Order Placement (COD)
   const handlePlaceOrder = async (orderPayload) => {
     const res = await api.createOrder(orderPayload);
     const confirmedOrder = res.data || {
@@ -452,173 +511,89 @@ export default function App() {
 
   const cartCount = cart.reduce((sum, item) => sum + item.qty, 0);
 
-  return (
-    <div className="min-h-screen bg-[#FAFAFA] text-neutral-900 flex flex-col font-sans selection:bg-neutral-900 selection:text-white">
-      {/* 1. Special Discount Campaign Banner */}
-      <CampaignBanner
-        campaign={campaign}
-        onApplyCoupon={(code) => {
-          setCouponInput(code);
-          handleApplyCoupon(code);
-          setIsCartOpen(true);
-        }}
-      />
+  // =========================================================================
+  // RENDER: ADMIN ROUTE (/admin)
+  // =========================================================================
+  if (isAdminRoute) {
+    if (!isAuthenticated) {
+      return (
+        <div className="min-h-screen bg-[#FAFAFA] text-neutral-900 font-sans selection:bg-neutral-900 selection:text-white flex flex-col justify-between">
+          <AdminLogin
+            onLogin={handleAdminLogin}
+            onReturnToStore={() => navigateTo('/')}
+            showToast={showToast}
+          />
+          <Toast toast={toast} />
+          <footer className="py-6 text-center text-xs text-neutral-400 border-t border-neutral-100">
+            MONO.STUDIO • Internal Admin Access Gate
+          </footer>
+        </div>
+      );
+    }
 
-      {/* 2. Sticky Header */}
-      <Navbar
-        viewMode={viewMode}
-        setViewMode={setViewMode}
-        selectedCategory={selectedCategory}
-        setSelectedCategory={setSelectedCategory}
-        searchQuery={searchQuery}
-        setSearchQuery={setSearchQuery}
-        cartCount={cartCount}
-        onOpenCart={() => {
-          setCheckoutSuccessOrder(null);
-          setIsCartOpen(true);
-        }}
-        pendingOrdersCount={orders.filter((o) => o.status === 'Pending').length}
-      />
-
-      {/* 3. Main Content: Storefront or Admin Panel */}
-      {viewMode === 'storefront' ? (
-        <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-8 space-y-12">
-          {/* Hero Section */}
-          <section className="relative rounded-3xl bg-neutral-950 text-white p-6 sm:p-10 overflow-hidden border border-neutral-800">
-            <div className="relative z-10 max-w-2xl space-y-4">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 text-amber-300 text-xs font-medium">
-                <Sparkles className="w-3.5 h-3.5" />
-                <span>Uniform 4:5 Lookbook • Conditional Size Engine</span>
+    return (
+      <div className="min-h-screen bg-[#FAFAFA] text-neutral-900 flex flex-col font-sans selection:bg-neutral-900 selection:text-white">
+        {/* Dedicated Admin Navigation Header */}
+        <header className="sticky top-0 z-30 bg-neutral-950 text-white border-b border-neutral-800">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-white text-neutral-950 flex items-center justify-center font-bold text-xs tracking-tighter">
+                M//S
               </div>
-              <h1 className="text-2xl sm:text-4xl font-bold tracking-tight leading-tight">
-                {campaign.active ? campaign.headline : 'Minimalist Apparel & Everyday Carry.'}
-              </h1>
-              <p className="text-neutral-300 text-sm sm:text-base leading-relaxed">
-                {campaign.active
-                  ? campaign.subtext
-                  : 'Designed for durability and clean aesthetics. Clothing items include tailored S–XL sizing; everyday carry gear ships in universal studio spec.'}
-              </p>
-              <div className="pt-2 flex flex-wrap items-center gap-3">
-                <a
-                  href="#catalog-section"
-                  className="px-5 py-2.5 rounded-xl bg-white text-neutral-950 font-semibold text-xs sm:text-sm hover:bg-neutral-200 transition"
-                >
-                  Explore Collection
-                </a>
-                <button
-                  type="button"
-                  onClick={() => setViewMode('admin')}
-                  className="px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/15 text-white font-medium text-xs sm:text-sm border border-white/15 transition flex items-center gap-1.5 cursor-pointer"
-                >
-                  <Crop className="w-4 h-4 text-amber-300" />
-                  <span>4:5 Admin Post & Cropper</span>
-                </button>
-              </div>
-            </div>
-            {/* Subtle glow */}
-            <div className="absolute -right-10 -bottom-10 w-72 h-72 bg-gradient-to-tr from-amber-500/20 to-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
-          </section>
-
-          {/* Featured Board */}
-          {selectedCategory === 'All' && !searchQuery && (
-            <FeaturedBoard
-              featuredProducts={featuredProducts}
-              selectedSizes={selectedSizes}
-              onSelectSize={(prodId, size) => {
-                setSelectedSizes((prev) => ({ ...prev, [prodId]: size }));
-                if (sizePromptError === prodId) setSizePromptError(null);
-              }}
-              sizePromptError={sizePromptError}
-              onAddToCart={handleAddToCart}
-            />
-          )}
-
-          {/* Store Catalog */}
-          <section id="catalog-section" className="space-y-5">
-            <div className="flex flex-wrap items-end justify-between gap-4 border-b border-neutral-200 pb-3">
               <div>
-                <span className="text-xs font-semibold uppercase tracking-widest text-neutral-400">
-                  All Products • Strict 4:5 Grid
+                <span className="font-bold text-sm tracking-tight block leading-tight">
+                  MONO.STUDIO ADMIN
                 </span>
-                <h2 className="text-xl sm:text-2xl font-bold tracking-tight mt-0.5">
-                  {selectedCategory === 'All' ? 'Complete Collection' : selectedCategory}
-                </h2>
-              </div>
-
-              {/* Active Coupons Bar */}
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="text-xs text-neutral-500">Active Coupons:</span>
-                {coupons
-                  .filter((c) => c.active)
-                  .map((c) => (
-                    <button
-                      key={c.id}
-                      type="button"
-                      onClick={() => {
-                        setCouponInput(c.code);
-                        handleApplyCoupon(c.code);
-                        setIsCartOpen(true);
-                      }}
-                      className="text-xs px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-200 font-mono font-semibold hover:bg-emerald-100 transition cursor-pointer"
-                    >
-                      {c.code} ({c.discountPercent}% OFF)
-                    </button>
-                  ))}
+                <span className="text-[10px] text-neutral-400 uppercase tracking-widest block">
+                  Secure Portal (/admin)
+                </span>
               </div>
             </div>
 
-            {filteredProducts.length === 0 ? (
-              <div className="bg-white rounded-2xl border border-neutral-200 p-12 text-center space-y-3">
-                <Package className="w-10 h-10 text-neutral-300 mx-auto" />
-                <h3 className="font-semibold text-base">No matching products found</h3>
-                <p className="text-xs text-neutral-500 max-w-sm mx-auto">
-                  Try clearing your search query or choosing another category.
-                </p>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSearchQuery('');
-                    setSelectedCategory('All');
-                  }}
-                  className="px-4 py-2 rounded-xl bg-neutral-950 text-white text-xs font-medium cursor-pointer"
-                >
-                  Reset Filters
-                </button>
+            {/* Admin identity & Sign Out */}
+            <div className="flex items-center gap-3">
+              <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/10 text-xs border border-white/10">
+                <UserCheck className="w-3.5 h-3.5 text-emerald-400" />
+                <span className="font-semibold text-white">{adminUser?.name || 'Authorized Admin'}</span>
+                <span className="text-neutral-400 text-[11px]">({adminUser?.email || 'admin'})</span>
               </div>
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                {filteredProducts.map((product) => (
-                  <ProductCard
-                    key={`prod-${product.id}`}
-                    product={product}
-                    isFeatured={false}
-                    selectedSize={selectedSizes[product.id]}
-                    onSelectSize={(prodId, size) => {
-                      setSelectedSizes((prev) => ({ ...prev, [prodId]: size }));
-                      if (sizePromptError === prodId) setSizePromptError(null);
-                    }}
-                    needsSizePrompt={sizePromptError === product.id}
-                    onAddToCart={handleAddToCart}
-                  />
-                ))}
-              </div>
-            )}
-          </section>
-        </main>
-      ) : (
-        /* Admin Panel */
+
+              <button
+                type="button"
+                onClick={() => navigateTo('/')}
+                className="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/15 text-xs text-neutral-200 transition flex items-center gap-1.5 cursor-pointer"
+                title="View customer storefront"
+              >
+                <ExternalLink className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Storefront</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleAdminLogout}
+                className="px-3 py-1.5 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 text-xs font-semibold transition flex items-center gap-1.5 border border-rose-500/30 cursor-pointer"
+                title="Log out of admin session"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+                <span>Sign Out</span>
+              </button>
+            </div>
+          </div>
+        </header>
+
+        {/* Admin Dashboard Body */}
         <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-8 space-y-8">
-          <div className="bg-white rounded-2xl border border-neutral-200 p-5 sm:p-6 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+          <div className="bg-white rounded-2xl border border-neutral-200 p-5 sm:p-6 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 shadow-sm">
             <div>
               <div className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-md mb-1.5">
                 <ShieldCheck className="w-3.5 h-3.5" />
-                <span>Admin Control Center • Full Functionality</span>
+                <span>Admin Control Center • Authenticated Session</span>
               </div>
               <h1 className="text-xl sm:text-2xl font-bold tracking-tight">
                 Store Management & 4:5 Post Studio
               </h1>
               <p className="text-xs text-neutral-500 mt-0.5">
-                Changes to products, clothing sizes, coupons, and campaigns sync directly with the storefront.
+                Changes to products, clothing sizes, coupons, and campaigns sync directly with the live storefront.
               </p>
             </div>
 
@@ -703,7 +678,157 @@ export default function App() {
             <BackendStatus showToast={showToast} />
           )}
         </main>
-      )}
+
+        <Toast toast={toast} />
+      </div>
+    );
+  }
+
+  // =========================================================================
+  // RENDER: CUSTOMER STOREFRONT (/)
+  // =========================================================================
+  return (
+    <div className="min-h-screen bg-[#FAFAFA] text-neutral-900 flex flex-col font-sans selection:bg-neutral-900 selection:text-white">
+      {/* 1. Special Discount Campaign Banner */}
+      <CampaignBanner
+        campaign={campaign}
+        onApplyCoupon={(code) => {
+          setCouponInput(code);
+          handleApplyCoupon(code);
+          setIsCartOpen(true);
+        }}
+      />
+
+      {/* 2. Customer Header */}
+      <Navbar
+        selectedCategory={selectedCategory}
+        setSelectedCategory={setSelectedCategory}
+        searchQuery={searchQuery}
+        setSearchQuery={setSearchQuery}
+        cartCount={cartCount}
+        onOpenCart={() => {
+          setCheckoutSuccessOrder(null);
+          setIsCartOpen(true);
+        }}
+        onNavigateAdmin={() => navigateTo('/admin')}
+      />
+
+      {/* 3. Main Storefront Content */}
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-8 space-y-12">
+        {/* Hero Section */}
+        <section className="relative rounded-3xl bg-neutral-950 text-white p-6 sm:p-10 overflow-hidden border border-neutral-800">
+          <div className="relative z-10 max-w-2xl space-y-4">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 text-amber-300 text-xs font-medium">
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>Uniform 4:5 Lookbook • Studio Engineered</span>
+            </div>
+            <h1 className="text-2xl sm:text-4xl font-bold tracking-tight leading-tight">
+              {campaign.active ? campaign.headline : 'Minimalist Apparel & Everyday Carry.'}
+            </h1>
+            <p className="text-neutral-300 text-sm sm:text-base leading-relaxed">
+              {campaign.active
+                ? campaign.subtext
+                : 'Designed for durability and clean aesthetics. Clothing items include tailored S–XL sizing; everyday carry gear ships in universal studio spec.'}
+            </p>
+            <div className="pt-2 flex flex-wrap items-center gap-3">
+              <a
+                href="#catalog-section"
+                className="px-5 py-2.5 rounded-xl bg-white text-neutral-950 font-semibold text-xs sm:text-sm hover:bg-neutral-200 transition"
+              >
+                Explore Collection
+              </a>
+            </div>
+          </div>
+          {/* Subtle glow */}
+          <div className="absolute -right-10 -bottom-10 w-72 h-72 bg-gradient-to-tr from-amber-500/20 to-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
+        </section>
+
+        {/* Featured Board */}
+        {selectedCategory === 'All' && !searchQuery && (
+          <FeaturedBoard
+            featuredProducts={featuredProducts}
+            selectedSizes={selectedSizes}
+            onSelectSize={(prodId, size) => {
+              setSelectedSizes((prev) => ({ ...prev, [prodId]: size }));
+              if (sizePromptError === prodId) setSizePromptError(null);
+            }}
+            sizePromptError={sizePromptError}
+            onAddToCart={handleAddToCart}
+          />
+        )}
+
+        {/* Store Catalog */}
+        <section id="catalog-section" className="space-y-5">
+          <div className="flex flex-wrap items-end justify-between gap-4 border-b border-neutral-200 pb-3">
+            <div>
+              <span className="text-xs font-semibold uppercase tracking-widest text-neutral-400">
+                All Products • Strict 4:5 Grid
+              </span>
+              <h2 className="text-xl sm:text-2xl font-bold tracking-tight mt-0.5">
+                {selectedCategory === 'All' ? 'Complete Collection' : selectedCategory}
+              </h2>
+            </div>
+
+            {/* Active Coupons Bar */}
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-xs text-neutral-500">Active Coupons:</span>
+              {coupons
+                .filter((c) => c.active)
+                .map((c) => (
+                  <button
+                    key={c.id}
+                    type="button"
+                    onClick={() => {
+                      setCouponInput(c.code);
+                      handleApplyCoupon(c.code);
+                      setIsCartOpen(true);
+                    }}
+                    className="text-xs px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-200 font-mono font-semibold hover:bg-emerald-100 transition cursor-pointer"
+                  >
+                    {c.code} ({c.discountPercent}% OFF)
+                  </button>
+                ))}
+            </div>
+          </div>
+
+          {filteredProducts.length === 0 ? (
+            <div className="bg-white rounded-2xl border border-neutral-200 p-12 text-center space-y-3">
+              <Package className="w-10 h-10 text-neutral-300 mx-auto" />
+              <h3 className="font-semibold text-base">No matching products found</h3>
+              <p className="text-xs text-neutral-500 max-w-sm mx-auto">
+                Try clearing your search query or choosing another category.
+              </p>
+              <button
+                type="button"
+                onClick={() => {
+                  setSearchQuery('');
+                  setSelectedCategory('All');
+                }}
+                className="px-4 py-2 rounded-xl bg-neutral-950 text-white text-xs font-medium cursor-pointer"
+              >
+                Reset Filters
+              </button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {filteredProducts.map((product) => (
+                <ProductCard
+                  key={`prod-${product.id}`}
+                  product={product}
+                  isFeatured={false}
+                  selectedSize={selectedSizes[product.id]}
+                  onSelectSize={(prodId, size) => {
+                    setSelectedSizes((prev) => ({ ...prev, [prodId]: size }));
+                    if (sizePromptError === prodId) setSizePromptError(null);
+                  }}
+                  needsSizePrompt={sizePromptError === product.id}
+                  onAddToCart={handleAddToCart}
+                />
+              ))}
+            </div>
+          )}
+        </section>
+      </main>
 
       {/* Cart & Checkout Drawer */}
       <CartDrawer
@@ -720,31 +845,34 @@ export default function App() {
         onPlaceOrder={handlePlaceOrder}
         checkoutSuccessOrder={checkoutSuccessOrder}
         setCheckoutSuccessOrder={setCheckoutSuccessOrder}
-        onInspectOrderInAdmin={() => {
-          setViewMode('admin');
-          setAdminTab('orders');
-        }}
+        onInspectOrderInAdmin={() => navigateTo('/admin')}
       />
 
-      {/* Toast */}
+      {/* Toast Notification */}
       <Toast toast={toast} />
 
-      {/* Footer */}
+      {/* Customer Footer */}
       <footer className="border-t border-neutral-200 bg-white mt-16 py-8 px-4 sm:px-6 text-xs text-neutral-500">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
             <span className="font-bold text-neutral-950">MONO.STUDIO</span>
             <span>•</span>
-            <span>Vercel Frontend + Heroku Node.js/PostgreSQL Ready</span>
+            <span>Minimalist Apparel & Everyday Carry</span>
           </div>
           <div className="flex items-center gap-4">
             <span>Payment: Cash on Delivery (COD)</span>
             <span>•</span>
-            <span className="text-pink-700 font-medium">bKash Webhook & API Ready in Backend</span>
+            <button
+              type="button"
+              onClick={() => navigateTo('/admin')}
+              className="hover:text-neutral-900 transition flex items-center gap-1 cursor-pointer"
+            >
+              <Lock className="w-3 h-3" />
+              <span>Admin Portal</span>
+            </button>
           </div>
         </div>
       </footer>
     </div>
   );
 }
-
