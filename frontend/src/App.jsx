@@ -7,11 +7,12 @@ import {
   Server,
   ShieldCheck,
   Sparkles,
-  Crop,
   LogOut,
   ExternalLink,
-  Lock,
-  UserCheck
+  UserCheck,
+  CheckCircle2,
+  Truck,
+  RotateCcw
 } from 'lucide-react';
 import { api, authStorage } from './api/client';
 import Navbar from './components/Navbar';
@@ -160,7 +161,7 @@ export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(() => Boolean(authStorage.getToken()));
 
   // Admin Tab Navigation
-  const [adminTab, setAdminTab] = useState('products'); // 'products' | 'coupons' | 'campaign' | 'orders' | 'backend'
+  const [adminTab, setAdminTab] = useState('products');
 
   // Application Data States
   const [products, setProducts] = useState(INITIAL_PRODUCTS);
@@ -235,7 +236,6 @@ export default function App() {
       setCampaign(campRes.data);
     }
 
-    // If authenticated, also fetch protected admin orders and all coupons
     if (isAuthenticated) {
       const [ordRes, allCoupRes] = await Promise.all([
         api.getOrders(),
@@ -254,7 +254,6 @@ export default function App() {
     refreshData();
   }, [isAuthenticated]);
 
-  // When admin toggles coupon active/inactive, sync applied coupon in cart
   useEffect(() => {
     if (appliedCoupon) {
       const live = coupons.find((c) => c.code === appliedCoupon.code);
@@ -268,7 +267,6 @@ export default function App() {
     }
   }, [coupons, appliedCoupon]);
 
-  // Filtered lists
   const filteredProducts = useMemo(() => {
     return products.filter((p) => {
       const matchesCategory =
@@ -294,8 +292,7 @@ export default function App() {
     if (res.data?.token) {
       setIsAuthenticated(true);
       setAdminUser(res.data.admin);
-      showToast(`Welcome back, ${res.data.admin.name}!`);
-      // Refresh protected data
+      showToast(`Authenticated as ${res.data.admin.name}`);
       const [ordRes, allCoupRes] = await Promise.all([
         api.getOrders(),
         api.getCoupons()
@@ -311,7 +308,7 @@ export default function App() {
     api.adminLogout();
     setIsAuthenticated(false);
     setAdminUser(null);
-    showToast('Signed out of admin portal');
+    showToast('Signed out');
   };
 
   // Cart operations
@@ -355,7 +352,7 @@ export default function App() {
       ];
     });
 
-    showToast(`Added ${product.title}${chosenSize ? ` (Size ${chosenSize})` : ''} to bag`);
+    showToast(`Added ${product.title}${chosenSize ? ` (${chosenSize})` : ''} to bag`);
   };
 
   const handleUpdateCartQty = (cartItemId, delta) => {
@@ -395,7 +392,7 @@ export default function App() {
     }
     if (!matched.active) {
       setAppliedCoupon(null);
-      setCouponFeedback({ type: 'error', message: `Coupon "${raw}" is currently deactivated by Admin.` });
+      setCouponFeedback({ type: 'error', message: `Coupon "${raw}" is currently inactive.` });
       return;
     }
 
@@ -424,10 +421,10 @@ export default function App() {
     setAppliedCoupon(null);
     setCouponInput('');
     setCouponFeedback(null);
-    showToast(`Order ${confirmedOrder.id} placed via Cash on Delivery!`);
+    showToast(`Order #${confirmedOrder.id} confirmed!`);
   };
 
-  // Admin Actions: Products
+  // Admin Actions
   const handleSaveProduct = async (editingId, payload) => {
     if (editingId) {
       const res = await api.updateProduct(editingId, payload);
@@ -455,7 +452,6 @@ export default function App() {
     );
   };
 
-  // Admin Actions: Coupons
   const handleCreateCoupon = async (payload) => {
     const res = await api.createCoupon(payload);
     const created = res.data || { id: Date.now(), ...payload, active: true };
@@ -483,7 +479,6 @@ export default function App() {
     showToast('Coupon removed.');
   };
 
-  // Admin Actions: Campaign
   const handleUpdateCampaign = async (payload) => {
     const res = await api.updateCampaign(payload);
     if (res.data) setCampaign(res.data);
@@ -500,7 +495,6 @@ export default function App() {
     });
   };
 
-  // Admin Actions: Orders
   const handleUpdateOrderStatus = async (id, status) => {
     await api.updateOrderStatus(id, { status });
     setOrders((prev) =>
@@ -593,7 +587,7 @@ export default function App() {
                 Store Management & 4:5 Post Studio
               </h1>
               <p className="text-xs text-neutral-500 mt-0.5">
-                Changes to products, clothing sizes, coupons, and campaigns sync directly with the live storefront.
+                Manage inventory, clothing sizes, coupons, and seasonal campaigns.
               </p>
             </div>
 
@@ -603,8 +597,8 @@ export default function App() {
                 { id: 'products', label: 'Products & 4:5 Cropper', icon: Layers, count: products.length },
                 { id: 'coupons', label: 'Coupons', icon: Ticket, count: coupons.filter((c) => c.active).length },
                 { id: 'campaign', label: 'Campaign Banner', icon: Megaphone },
-                { id: 'orders', label: 'Orders (COD / bKash)', icon: Package, count: orders.length },
-                { id: 'backend', label: 'Backend & Deploy', icon: Server }
+                { id: 'orders', label: 'Orders (COD)', icon: Package, count: orders.length },
+                { id: 'backend', label: 'Backend & Security', icon: Server }
               ].map((tab) => {
                 const Icon = tab.icon;
                 const active = adminTab === tab.id;
@@ -685,7 +679,7 @@ export default function App() {
   }
 
   // =========================================================================
-  // RENDER: CUSTOMER STOREFRONT (/)
+  // RENDER: PRODUCTION CUSTOMER STOREFRONT (/)
   // =========================================================================
   return (
     <div className="min-h-screen bg-[#FAFAFA] text-neutral-900 flex flex-col font-sans selection:bg-neutral-900 selection:text-white">
@@ -710,38 +704,69 @@ export default function App() {
           setCheckoutSuccessOrder(null);
           setIsCartOpen(true);
         }}
-        onNavigateAdmin={() => navigateTo('/admin')}
       />
 
       {/* 3. Main Storefront Content */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-8 space-y-12">
-        {/* Hero Section */}
-        <section className="relative rounded-3xl bg-neutral-950 text-white p-6 sm:p-10 overflow-hidden border border-neutral-800">
+        {/* Production Hero Section */}
+        <section className="relative rounded-3xl bg-neutral-950 text-white p-6 sm:p-12 overflow-hidden border border-neutral-800 shadow-sm">
           <div className="relative z-10 max-w-2xl space-y-4">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 text-amber-300 text-xs font-medium">
               <Sparkles className="w-3.5 h-3.5" />
-              <span>Uniform 4:5 Lookbook • Studio Engineered</span>
+              <span>STUDIO SERIES • 2026 DROP</span>
             </div>
-            <h1 className="text-2xl sm:text-4xl font-bold tracking-tight leading-tight">
+            <h1 className="text-3xl sm:text-5xl font-extrabold tracking-tight leading-tight">
               {campaign.active ? campaign.headline : 'Minimalist Apparel & Everyday Carry.'}
             </h1>
             <p className="text-neutral-300 text-sm sm:text-base leading-relaxed">
               {campaign.active
                 ? campaign.subtext
-                : 'Designed for durability and clean aesthetics. Clothing items include tailored S–XL sizing; everyday carry gear ships in universal studio spec.'}
+                : 'Designed for durability and clean aesthetics. Studio apparel crafted with tailored sizing and universal everyday carry objects.'}
             </p>
             <div className="pt-2 flex flex-wrap items-center gap-3">
               <a
                 href="#catalog-section"
-                className="px-5 py-2.5 rounded-xl bg-white text-neutral-950 font-semibold text-xs sm:text-sm hover:bg-neutral-200 transition"
+                className="px-6 py-3 rounded-xl bg-white text-neutral-950 font-bold text-xs sm:text-sm hover:bg-neutral-200 transition shadow-sm"
               >
-                Explore Collection
+                Shop Collection
               </a>
             </div>
           </div>
-          {/* Subtle glow */}
-          <div className="absolute -right-10 -bottom-10 w-72 h-72 bg-gradient-to-tr from-amber-500/20 to-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute -right-10 -bottom-10 w-80 h-80 bg-gradient-to-tr from-amber-500/20 to-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
         </section>
+
+        {/* Feature Badges */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
+          <div className="p-4 rounded-2xl bg-white border border-neutral-200/80 flex items-center gap-3.5">
+            <div className="w-10 h-10 rounded-xl bg-neutral-100 flex items-center justify-center shrink-0">
+              <Truck className="w-5 h-5 text-neutral-900" />
+            </div>
+            <div>
+              <div className="font-bold text-xs text-neutral-950">Cash on Delivery</div>
+              <div className="text-[11px] text-neutral-500">Pay when your parcel arrives</div>
+            </div>
+          </div>
+
+          <div className="p-4 rounded-2xl bg-white border border-neutral-200/80 flex items-center gap-3.5">
+            <div className="w-10 h-10 rounded-xl bg-neutral-100 flex items-center justify-center shrink-0">
+              <CheckCircle2 className="w-5 h-5 text-neutral-900" />
+            </div>
+            <div>
+              <div className="font-bold text-xs text-neutral-950">100% Genuine Quality</div>
+              <div className="text-[11px] text-neutral-500">Heavyweight combed fabrics</div>
+            </div>
+          </div>
+
+          <div className="p-4 rounded-2xl bg-white border border-neutral-200/80 flex items-center gap-3.5">
+            <div className="w-10 h-10 rounded-xl bg-neutral-100 flex items-center justify-center shrink-0">
+              <RotateCcw className="w-5 h-5 text-neutral-900" />
+            </div>
+            <div>
+              <div className="font-bold text-xs text-neutral-950">Hassle-Free Exchange</div>
+              <div className="text-[11px] text-neutral-500">Easy size replacement support</div>
+            </div>
+          </div>
+        </div>
 
         {/* Featured Board */}
         {selectedCategory === 'All' && !searchQuery && (
@@ -762,7 +787,7 @@ export default function App() {
           <div className="flex flex-wrap items-end justify-between gap-4 border-b border-neutral-200 pb-3">
             <div>
               <span className="text-xs font-semibold uppercase tracking-widest text-neutral-400">
-                All Products • Strict 4:5 Grid
+                Studio Catalog
               </span>
               <h2 className="text-xl sm:text-2xl font-bold tracking-tight mt-0.5">
                 {selectedCategory === 'All' ? 'Complete Collection' : selectedCategory}
@@ -845,31 +870,57 @@ export default function App() {
         onPlaceOrder={handlePlaceOrder}
         checkoutSuccessOrder={checkoutSuccessOrder}
         setCheckoutSuccessOrder={setCheckoutSuccessOrder}
-        onInspectOrderInAdmin={() => navigateTo('/admin')}
       />
 
       {/* Toast Notification */}
       <Toast toast={toast} />
 
-      {/* Customer Footer */}
-      <footer className="border-t border-neutral-200 bg-white mt-16 py-8 px-4 sm:px-6 text-xs text-neutral-500">
-        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
-            <span className="font-bold text-neutral-950">MONO.STUDIO</span>
-            <span>•</span>
-            <span>Minimalist Apparel & Everyday Carry</span>
+      {/* Production Brand Footer */}
+      <footer className="border-t border-neutral-200 bg-white mt-20 py-12 px-4 sm:px-6 text-xs text-neutral-500">
+        <div className="max-w-7xl mx-auto space-y-8">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+            <div className="space-y-3 md:col-span-2">
+              <div className="flex items-center gap-2">
+                <div className="w-6 h-6 rounded-md bg-neutral-950 text-white flex items-center justify-center font-bold text-xs tracking-tighter">
+                  M//S
+                </div>
+                <span className="font-bold text-sm text-neutral-950 tracking-tight">MONO.STUDIO</span>
+              </div>
+              <p className="text-neutral-500 max-w-sm text-xs leading-relaxed">
+                Apparel and everyday carry objects engineered with minimal aesthetics, heavyweight fabrics, and uncompromising functional detail. Based in Dhaka, Bangladesh.
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <div className="font-bold text-neutral-900 uppercase tracking-wider text-[11px]">Customer Support</div>
+              <div className="text-xs space-y-1.5 text-neutral-500">
+                <div>Cash on Delivery available nationwide</div>
+                <div>Dhaka Metro: 24–48 Hours Delivery</div>
+                <div>Outside Dhaka: 3–5 Business Days</div>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <div className="font-bold text-neutral-900 uppercase tracking-wider text-[11px]">Studio Portal</div>
+              <div className="text-xs space-y-1.5">
+                <button
+                  type="button"
+                  onClick={() => navigateTo('/admin')}
+                  className="hover:text-neutral-950 transition cursor-pointer text-neutral-500"
+                >
+                  Authorized Admin Login
+                </button>
+              </div>
+            </div>
           </div>
-          <div className="flex items-center gap-4">
-            <span>Payment: Cash on Delivery (COD)</span>
-            <span>•</span>
-            <button
-              type="button"
-              onClick={() => navigateTo('/admin')}
-              className="hover:text-neutral-900 transition flex items-center gap-1 cursor-pointer"
-            >
-              <Lock className="w-3 h-3" />
-              <span>Admin Portal</span>
-            </button>
+
+          <div className="pt-8 border-t border-neutral-100 flex flex-col sm:flex-row items-center justify-between gap-4 text-[11px] text-neutral-400">
+            <div>
+              © {new Date().getFullYear()} MONO.STUDIO. All rights reserved.
+            </div>
+            <div>
+              Cash on Delivery (COD) Verified
+            </div>
           </div>
         </div>
       </footer>

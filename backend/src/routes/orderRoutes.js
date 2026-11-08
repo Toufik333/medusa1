@@ -2,9 +2,10 @@ const express = require('express');
 const router = express.Router();
 const orderController = require('../controllers/orderController');
 const { requireAdminAuth } = require('../config/auth');
+const { validateOrderPayload } = require('../middleware/security');
 
 // Public Customer checkout routes
-router.post('/', orderController.createOrder);
+router.post('/', validateOrderPayload, orderController.createOrder);
 router.get('/:id', orderController.getOrderById);
 
 // Protected Admin routes

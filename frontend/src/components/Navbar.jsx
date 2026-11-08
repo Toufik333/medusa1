@@ -1,5 +1,5 @@
 import React from 'react';
-import { ShoppingBag, Search, X, Lock } from 'lucide-react';
+import { ShoppingBag, Search, X } from 'lucide-react';
 
 const CATEGORIES = ['All', 'Clothing', 'Accessories', 'Gear'];
 
@@ -9,11 +9,10 @@ export default function Navbar({
   searchQuery,
   setSearchQuery,
   cartCount,
-  onOpenCart,
-  onNavigateAdmin
+  onOpenCart
 }) {
   return (
-    <header className="sticky top-0 z-30 bg-white/85 backdrop-blur-md border-b border-neutral-200/80">
+    <header className="sticky top-0 z-30 bg-white/90 backdrop-blur-md border-b border-neutral-200/80">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-3">
         {/* Brand Logo */}
         <div className="flex items-center gap-6">
@@ -34,7 +33,7 @@ export default function Navbar({
                 MONO.STUDIO
               </span>
               <span className="text-[10px] text-neutral-400 tracking-widest uppercase block mt-0.5">
-                Dhaka • Apparel & Objects
+                Dhaka • Studio Apparel & Objects
               </span>
             </div>
           </a>
@@ -46,7 +45,7 @@ export default function Navbar({
                 key={cat}
                 type="button"
                 onClick={() => setSelectedCategory(cat)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${
+                className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                   selectedCategory === cat
                     ? 'bg-white text-neutral-950 shadow-sm'
                     : 'text-neutral-600 hover:text-neutral-950'
@@ -66,7 +65,7 @@ export default function Navbar({
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search hoodies, backpacks, gear..."
+              placeholder="Search products..."
               className="w-full pl-9 pr-8 py-1.5 bg-neutral-100 hover:bg-neutral-100/80 focus:bg-white rounded-xl text-xs border border-transparent focus:border-neutral-300 focus:outline-none transition"
             />
             {searchQuery && (
@@ -81,18 +80,8 @@ export default function Navbar({
           </div>
         </div>
 
-        {/* Customer Actions: Cart Bag + Subtle Admin Portal Link */}
+        {/* Customer Cart Drawer Button */}
         <div className="flex items-center gap-3">
-          <button
-            type="button"
-            onClick={onNavigateAdmin}
-            className="p-2 rounded-xl text-neutral-400 hover:text-neutral-800 hover:bg-neutral-100 transition cursor-pointer"
-            title="Admin Portal (/admin)"
-            aria-label="Admin Portal"
-          >
-            <Lock className="w-4 h-4" />
-          </button>
-
           <button
             type="button"
             onClick={onOpenCart}

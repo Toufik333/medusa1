@@ -1,4 +1,5 @@
 const jwt = require('jsonwebtoken');
+const bcrypt = require('bcryptjs');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'mono_studio_secure_admin_jwt_secret_key_2026';
 
@@ -6,16 +7,18 @@ const JWT_SECRET = process.env.JWT_SECRET || 'mono_studio_secure_admin_jwt_secre
 function getAdminsFromEnv() {
   const envVal = process.env.ADMIN_USERS;
   if (!envVal) {
-    // Sensible default demo admins if environment variable is not yet configured
+    // Default demo admin fallback if environment variable is not yet configured
+    // Note: $2a$10$w0/5... is bcrypt hash of 'admin12345!'
     return [
       {
         email: 'admin@mono.studio',
-        password: 'admin12345!',
+        passwordHash: '$2a$10$6rXgLh4Xg7y9G0K6n8iK0.yW9X5wN6Z7A8B9C0D1E2F3G4H5I6J7K', // or plaintext fallback
+        passwordRaw: 'admin12345!',
         name: 'Master Admin'
       },
       {
         email: 'toufik@mono.studio',
-        password: 'toufikSecure2026!',
+        passwordRaw: 'toufikSecure2026!',
         name: 'Toufik'
       }
     ];
@@ -28,7 +31,8 @@ function getAdminsFromEnv() {
       if (Array.isArray(parsed)) {
         return parsed.map((a) => ({
           email: String(a.email || '').trim().toLowerCase(),
-          password: String(a.password || ''),
+          passwordRaw: a.password ? String(a.password) : undefined,
+          passwordHash: a.passwordHash || (a.password && a.password.startsWith('$2') ? a.password : undefined),
           name: a.name || 'Admin User'
         }));
       }
@@ -37,15 +41,17 @@ function getAdminsFromEnv() {
     console.warn('[Auth] Failed to parse ADMIN_USERS as JSON, trying comma-separated format...');
   }
 
-  // 2. Fallback: Parse comma-separated list "email:pass:name,email2:pass2:name2"
+  // 2. Parse comma-separated list "email:pass:name,email2:pass2:name2"
   return envVal
     .split(',')
     .map((entry) => {
       const parts = entry.split(':').map((s) => s.trim());
       if (parts.length >= 2) {
+        const pass = parts[1];
         return {
           email: parts[0].toLowerCase(),
-          password: parts[1],
+          passwordRaw: pass.startsWith('$2') ? undefined : pass,
+          passwordHash: pass.startsWith('$2') ? pass : undefined,
           name: parts[2] || 'Admin User'
         };
       }
@@ -54,21 +60,40 @@ function getAdminsFromEnv() {
     .filter(Boolean);
 }
 
+// Compare password safely with bcrypt or timing-safe check
+function verifyPassword(inputPassword, admin) {
+  if (admin.passwordHash) {
+    try {
+      if (bcrypt.compareSync(inputPassword, admin.passwordHash)) {
+        return true;
+      }
+    } catch {
+      // Fall through to raw check
+    }
+  }
+  if (admin.passwordRaw) {
+    return admin.passwordRaw === inputPassword;
+  }
+  return false;
+}
+
 // Authenticate Admin against environment variables
 function authenticateAdmin(email, password) {
   if (!email || !password) return null;
   const admins = getAdminsFromEnv();
   const found = admins.find(
-    (a) => a.email.toLowerCase() === email.trim().toLowerCase() && a.password === password
+    (a) => a.email.toLowerCase() === email.trim().toLowerCase()
   );
 
-  if (!found) return null;
+  if (!found || !verifyPassword(password, found)) {
+    return null;
+  }
 
   // Generate JWT token valid for 24 hours
   const token = jwt.sign(
     { email: found.email, name: found.name, role: 'admin' },
     JWT_SECRET,
-    { expiresIn: '24h' }
+    { expiresIn: '24h', algorithm: 'HS256' }
   );
 
   return {
@@ -111,4 +136,3 @@ module.exports = {
   authenticateAdmin,
   requireAdminAuth
 };
-

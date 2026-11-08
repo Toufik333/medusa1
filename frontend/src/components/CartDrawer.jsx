@@ -7,10 +7,11 @@ import {
   Phone,
   MapPin,
   Truck,
-  Lock,
   CheckCircle2,
   AlertCircle,
-  ChevronRight
+  ChevronRight,
+  Clock,
+  ShieldCheck
 } from 'lucide-react';
 import { formatPrice } from './ProductCard';
 
@@ -27,8 +28,7 @@ export default function CartDrawer({
   onApplyCoupon,
   onPlaceOrder,
   checkoutSuccessOrder,
-  setCheckoutSuccessOrder,
-  onInspectOrderInAdmin
+  setCheckoutSuccessOrder
 }) {
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
@@ -96,43 +96,56 @@ export default function CartDrawer({
         {/* Drawer Body */}
         <div className="flex-1 overflow-y-auto p-5 space-y-6">
           {checkoutSuccessOrder ? (
-            <div className="p-6 rounded-2xl bg-emerald-50 border border-emerald-200 text-center space-y-4 my-6">
-              <CheckCircle2 className="w-12 h-12 text-emerald-600 mx-auto" />
-              <div className="space-y-1">
-                <span className="text-xs font-mono uppercase px-2.5 py-0.5 rounded bg-emerald-200/70 text-emerald-950 font-bold">
-                  {checkoutSuccessOrder.id}
+            /* Production-Ready Order Confirmation */
+            <div className="p-6 rounded-3xl bg-neutral-50 border border-neutral-200 text-center space-y-5 my-4">
+              <div className="w-14 h-14 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto shadow-sm">
+                <CheckCircle2 className="w-8 h-8" />
+              </div>
+
+              <div className="space-y-1.5">
+                <span className="text-[11px] font-mono uppercase px-3 py-1 rounded-full bg-neutral-950 text-white font-bold tracking-wider">
+                  Order #{checkoutSuccessOrder.id}
                 </span>
-                <h3 className="text-lg font-bold text-neutral-950 pt-1">
-                  Order Confirmed (Cash on Delivery)
+                <h3 className="text-xl font-bold text-neutral-950 pt-2">
+                  Order Confirmed!
                 </h3>
                 <p className="text-xs text-neutral-600 leading-relaxed">
-                  Thank you, <strong>{checkoutSuccessOrder.customerName}</strong>! Please keep{' '}
-                  <strong>{formatPrice(checkoutSuccessOrder.total)}</strong> ready in cash upon delivery to{' '}
-                  {checkoutSuccessOrder.area}.
+                  Thank you for shopping with us, <strong>{checkoutSuccessOrder.customerName}</strong>. Your order has been placed and is currently being processed for delivery.
                 </p>
               </div>
-              <div className="pt-2 flex flex-col gap-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    onClose();
-                    onInspectOrderInAdmin();
-                  }}
-                  className="w-full py-2.5 rounded-xl bg-neutral-950 text-white text-xs font-semibold cursor-pointer hover:bg-neutral-800 transition"
-                >
-                  Inspect Order in Admin Panel
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setCheckoutSuccessOrder(null);
-                    onClose();
-                  }}
-                  className="w-full py-2 rounded-xl bg-white border border-neutral-200 text-xs font-medium cursor-pointer hover:bg-neutral-50 transition"
-                >
-                  Continue Shopping
-                </button>
+
+              {/* Order Summary Box */}
+              <div className="p-4 rounded-2xl bg-white border border-neutral-200/90 text-left text-xs space-y-2.5">
+                <div className="flex justify-between text-neutral-600">
+                  <span>Delivery Zone:</span>
+                  <span className="font-semibold text-neutral-900">{checkoutSuccessOrder.area}</span>
+                </div>
+                <div className="flex justify-between text-neutral-600">
+                  <span>Payment Method:</span>
+                  <span className="font-semibold text-neutral-900">Cash on Delivery (COD)</span>
+                </div>
+                <div className="flex justify-between text-neutral-600">
+                  <span>Total Payable:</span>
+                  <span className="font-bold text-neutral-950 text-sm">{formatPrice(checkoutSuccessOrder.total)}</span>
+                </div>
+                <div className="pt-2 border-t border-neutral-100 flex items-start gap-2 text-[11px] text-neutral-500">
+                  <Clock className="w-3.5 h-3.5 shrink-0 mt-0.5 text-neutral-400" />
+                  <span>
+                    Estimated delivery within 24–48 hours (Dhaka Metro) or 3–5 days (Outside Dhaka). Our delivery partner will call your phone prior to arrival.
+                  </span>
+                </div>
               </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setCheckoutSuccessOrder(null);
+                  onClose();
+                }}
+                className="w-full py-3 rounded-2xl bg-neutral-950 text-white text-xs font-semibold cursor-pointer hover:bg-neutral-800 transition shadow-sm"
+              >
+                Continue Shopping
+              </button>
             </div>
           ) : cart.length === 0 ? (
             <div className="text-center py-16 space-y-3">
@@ -141,7 +154,7 @@ export default function CartDrawer({
                 Your bag is currently empty
               </div>
               <p className="text-xs text-neutral-500 max-w-xs mx-auto">
-                Explore our 4:5 catalog and add clothing (with size selection) or everyday carry gear.
+                Explore our catalog to add clothing (with size selection) or everyday objects.
               </p>
             </div>
           ) : (
@@ -211,7 +224,7 @@ export default function CartDrawer({
                     Promo / Coupon Code
                   </span>
                   <span className="text-[11px] font-normal text-neutral-500">
-                    Try WINTER15 or WELCOME10
+                    Enter valid coupon
                   </span>
                 </label>
                 <form
@@ -230,7 +243,7 @@ export default function CartDrawer({
                   />
                   <button
                     type="submit"
-                    className="px-4 py-2 rounded-xl bg-neutral-950 text-white text-xs font-semibold hover:bg-neutral-800 cursor-pointer"
+                    className="px-4 py-2 rounded-xl bg-neutral-950 text-white text-xs font-semibold hover:bg-neutral-800 cursor-pointer transition"
                   >
                     Apply
                   </button>
@@ -253,10 +266,10 @@ export default function CartDrawer({
                 )}
               </div>
 
-              {/* Delivery & Payment Form */}
+              {/* Delivery Details Form */}
               <form id="cod-checkout-form" onSubmit={handleSubmitCheckout} className="space-y-4">
                 <h3 className="font-bold text-xs uppercase tracking-wider text-neutral-500">
-                  Customer & Delivery Info
+                  Delivery Details
                 </h3>
                 <div className="space-y-3">
                   <div className="relative">
@@ -277,7 +290,7 @@ export default function CartDrawer({
                       required
                       value={customerPhone}
                       onChange={(e) => setCustomerPhone(e.target.value)}
-                      placeholder="Phone Number (e.g., 017XXXXXXXX) *"
+                      placeholder="Contact Phone (e.g., 017XXXXXXXX) *"
                       className="w-full pl-9 pr-3 py-2 rounded-xl border border-neutral-300 text-xs focus:outline-none focus:border-neutral-950"
                     />
                   </div>
@@ -288,7 +301,7 @@ export default function CartDrawer({
                       required
                       value={customerAddress}
                       onChange={(e) => setCustomerAddress(e.target.value)}
-                      placeholder="Street Address, House/Flat, Area *"
+                      placeholder="Delivery Address (House/Flat, Street, Area) *"
                       className="w-full pl-9 pr-3 py-2 rounded-xl border border-neutral-300 text-xs focus:outline-none focus:border-neutral-950"
                     />
                   </div>
@@ -314,14 +327,13 @@ export default function CartDrawer({
                   </div>
                 </div>
 
-                {/* Payment Method Selector: COD Active + bKash Reserved */}
+                {/* Payment Method: Pure Cash on Delivery */}
                 <div className="space-y-2 pt-2">
                   <h3 className="font-bold text-xs uppercase tracking-wider text-neutral-500">
                     Payment Method
                   </h3>
 
-                  {/* Option 1: Cash on Delivery (Active) */}
-                  <div className="p-3.5 rounded-xl border-2 border-neutral-950 bg-neutral-50 flex items-center justify-between">
+                  <div className="p-3.5 rounded-2xl border-2 border-neutral-950 bg-neutral-50 flex items-center justify-between">
                     <div className="flex items-center gap-2.5">
                       <Truck className="w-4 h-4 text-neutral-950" />
                       <div>
@@ -329,30 +341,12 @@ export default function CartDrawer({
                           Cash on Delivery (COD)
                         </div>
                         <div className="text-[11px] text-neutral-500">
-                          Pay with cash when your parcel arrives
+                          Pay in cash when your parcel arrives at your doorstep
                         </div>
                       </div>
                     </div>
                     <span className="px-2 py-0.5 rounded bg-neutral-950 text-white text-[10px] font-bold">
                       ACTIVE
-                    </span>
-                  </div>
-
-                  {/* Option 2: bKash (Backend Slot Reserved) */}
-                  <div className="p-3.5 rounded-xl border border-dashed border-pink-300 bg-pink-50/40 flex items-center justify-between opacity-80">
-                    <div className="flex items-center gap-2.5">
-                      <Lock className="w-4 h-4 text-pink-600" />
-                      <div>
-                        <div className="text-xs font-bold text-pink-950 flex items-center gap-1.5">
-                          <span>bKash Payment Gateway</span>
-                        </div>
-                        <div className="text-[11px] text-pink-700">
-                          Backend endpoint & DB ready • Disabled on storefront
-                        </div>
-                      </div>
-                    </div>
-                    <span className="px-2 py-0.5 rounded bg-pink-100 text-pink-800 text-[10px] font-semibold">
-                      RESERVED
                     </span>
                   </div>
                 </div>
@@ -389,7 +383,7 @@ export default function CartDrawer({
               type="submit"
               form="cod-checkout-form"
               disabled={isSubmitting}
-              className="w-full py-3 px-4 rounded-xl bg-neutral-950 text-white font-semibold text-xs sm:text-sm hover:bg-neutral-800 transition flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+              className="w-full py-3 px-4 rounded-xl bg-neutral-950 text-white font-semibold text-xs sm:text-sm hover:bg-neutral-800 transition flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 shadow-sm"
             >
               <span>Confirm Order — Cash on Delivery ({formatPrice(grandTotal)})</span>
               <ChevronRight className="w-4 h-4" />
@@ -400,4 +394,3 @@ export default function CartDrawer({
     </div>
   );
 }
-
