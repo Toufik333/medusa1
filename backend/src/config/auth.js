@@ -27,9 +27,9 @@ function getAdminsFromEnv() {
     ];
   }
 
-  try {
-    // 1. Try parsing as JSON array
-    if (envVal.trim().startsWith('[')) {
+  // 1. Try parsing as JSON array
+  if (envVal.trim().startsWith('[')) {
+    try {
       const parsed = JSON.parse(envVal);
       if (Array.isArray(parsed)) {
         return parsed.map((a) => ({
@@ -39,9 +39,37 @@ function getAdminsFromEnv() {
           name: a.name || 'Admin User'
         }));
       }
+    } catch (err) {
+      // JSON.parse failed. Could be unquoted JS object from PowerShell: [{email:...,password:...}]
+      const objMatches = envVal.match(/\{[^}]+\}/g);
+      if (objMatches && objMatches.length > 0) {
+        const extracted = [];
+        for (const objStr of objMatches) {
+          const inner = objStr.replace(/^[{\s]+|[}\s]+$/g, '');
+          const props = {};
+          inner.split(',').forEach((pair) => {
+            const idx = pair.indexOf(':');
+            if (idx !== -1) {
+              const k = pair.substring(0, idx).trim().replace(/^['"]+|['"]+$/g, '');
+              const v = pair.substring(idx + 1).trim().replace(/^['"]+|['"]+$/g, '');
+              props[k] = v;
+            }
+          });
+          if (props.email && (props.password || props.passwordRaw || props.passwordHash)) {
+            const pass = props.password || props.passwordRaw || props.passwordHash;
+            extracted.push({
+              email: props.email.trim().toLowerCase(),
+              passwordRaw: pass.startsWith('$2') ? undefined : pass,
+              passwordHash: pass.startsWith('$2') ? pass : undefined,
+              name: props.name || 'Admin User'
+            });
+          }
+        }
+        if (extracted.length > 0) {
+          return extracted;
+        }
+      }
     }
-  } catch (err) {
-    console.warn('[Auth] Failed to parse ADMIN_USERS as JSON, trying comma-separated format...');
   }
 
   // 2. Parse comma-separated list "email:pass:name,email2:pass2:name2"
