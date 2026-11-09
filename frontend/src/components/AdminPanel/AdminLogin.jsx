@@ -35,21 +35,27 @@ export default function AdminLogin({ onLogin, onReturnToStore, showToast }) {
           className="inline-flex items-center gap-1.5 text-xs font-semibold text-neutral-500 hover:text-neutral-950 transition cursor-pointer"
         >
           <ArrowLeft className="w-4 h-4" />
-          <span>Back to Storefront</span>
+          <span>Back to PerfumeGo Storefront</span>
         </button>
 
         {/* Card Box */}
         <div className="bg-white rounded-3xl border border-neutral-200/90 p-8 shadow-xl shadow-neutral-900/5 space-y-6">
-          <div className="text-center space-y-2">
-            <div className="w-12 h-12 rounded-2xl bg-neutral-950 text-white flex items-center justify-center mx-auto shadow-md">
-              <Lock className="w-6 h-6" />
+          <div className="text-center space-y-3">
+            <div className="w-16 h-16 rounded-full bg-neutral-950/5 p-2 flex items-center justify-center mx-auto border border-amber-900/15 shadow-sm">
+              <img
+                src="/logo.png"
+                alt="PerfumeGo Logo"
+                className="w-full h-full object-contain"
+              />
             </div>
-            <h1 className="text-2xl font-bold tracking-tight text-neutral-950">
-              Admin Portal
-            </h1>
-            <p className="text-xs text-neutral-500 max-w-xs mx-auto">
-              Restricted management area. Authorized admins only.
-            </p>
+            <div>
+              <h1 className="text-2xl font-bold tracking-tight text-neutral-950">
+                Perfume<span className="text-amber-700">Go</span> Admin
+              </h1>
+              <p className="text-xs text-neutral-500 max-w-xs mx-auto mt-1">
+                Restricted management portal for authorized fragrance directors.
+              </p>
+            </div>
           </div>
 
           {errorMessage && (
@@ -70,7 +76,7 @@ export default function AdminLogin({ onLogin, onReturnToStore, showToast }) {
                 autoComplete="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="admin@mono.studio"
+                placeholder="admin@perfumego.com"
                 className="w-full px-4 py-2.5 rounded-xl border border-neutral-300 text-sm focus:outline-none focus:border-neutral-950 transition"
               />
             </div>
@@ -105,7 +111,7 @@ export default function AdminLogin({ onLogin, onReturnToStore, showToast }) {
               disabled={isSubmitting}
               className="w-full py-3 px-4 rounded-xl bg-neutral-950 text-white font-semibold text-sm hover:bg-neutral-800 active:scale-[0.99] transition flex items-center justify-center gap-2 cursor-pointer shadow-sm disabled:opacity-50"
             >
-              <ShieldCheck className="w-4 h-4" />
+              <ShieldCheck className="w-4 h-4 text-amber-400" />
               <span>{isSubmitting ? 'Verifying...' : 'Sign In to Dashboard'}</span>
             </button>
           </form>
@@ -122,4 +128,3 @@ export default function AdminLogin({ onLogin, onReturnToStore, showToast }) {
     </div>
   );
 }
-

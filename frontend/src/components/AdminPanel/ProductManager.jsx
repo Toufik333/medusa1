@@ -16,10 +16,12 @@ import ProductImageFrame from '../ProductImageFrame';
 import { formatPrice } from '../ProductCard';
 
 const SAMPLE_STOCK_PHOTOS = [
-  { label: 'Oversized Tee (Clothing)', url: 'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?auto=format&fit=crop&w=900&q=85' },
-  { label: 'Minimalist Watch (Accessory)', url: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=900&q=85' },
-  { label: 'Tactical Jacket (Clothing)', url: 'https://images.unsplash.com/photo-1591047139829-d91aecb6caea?auto=format&fit=crop&w=900&q=85' },
-  { label: 'Canvas Tote (Gear)', url: 'https://images.unsplash.com/photo-1544816155-12df9643f363?auto=format&fit=crop&w=900&q=85' }
+  { label: 'Oud Royale Extrait (Fragrance)', url: 'https://images.unsplash.com/photo-1592945403244-b3fbafd7f539?auto=format&fit=crop&w=900&q=85' },
+  { label: 'Velvet Santal Bottle (Fragrance)', url: 'https://images.unsplash.com/photo-1547887537-6158d64c35b3?auto=format&fit=crop&w=900&q=85' },
+  { label: 'PerfumeGo Crest Hoodie (Clothing)', url: 'https://images.unsplash.com/photo-1556821840-3a63f95609a7?auto=format&fit=crop&w=900&q=85' },
+  { label: 'Luxury Amber Noir (Fragrance)', url: 'https://images.unsplash.com/photo-1523293182086-7651a899d37f?auto=format&fit=crop&w=900&q=85' },
+  { label: 'Discovery Gift Set (Fragrance)', url: 'https://images.unsplash.com/photo-1616949755610-8c9bbc08f138?auto=format&fit=crop&w=900&q=85' },
+  { label: 'Signature Monogram Tee (Clothing)', url: 'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?auto=format&fit=crop&w=900&q=85' }
 ];
 
 const ALL_SIZES = ['S', 'M', 'L', 'XL'];
@@ -36,9 +38,9 @@ export default function ProductManager({
   const [formSubtitle, setFormSubtitle] = useState('');
   const [formPrice, setFormPrice] = useState('');
   const [formDiscountPrice, setFormDiscountPrice] = useState('');
-  const [formIsClothing, setFormIsClothing] = useState(true);
-  const [formCategory, setFormCategory] = useState('Clothing');
-  const [formSizes, setFormSizes] = useState(['S', 'M', 'L', 'XL']);
+  const [formIsClothing, setFormIsClothing] = useState(false);
+  const [formCategory, setFormCategory] = useState('Fragrances');
+  const [formSizes, setFormSizes] = useState([]);
   const [formFeatured, setFormFeatured] = useState(false);
   const [formStock, setFormStock] = useState('25');
 
@@ -57,9 +59,9 @@ export default function ProductManager({
     setFormSubtitle('');
     setFormPrice('');
     setFormDiscountPrice('');
-    setFormIsClothing(true);
-    setFormCategory('Clothing');
-    setFormSizes(['S', 'M', 'L', 'XL']);
+    setFormIsClothing(false);
+    setFormCategory('Fragrances');
+    setFormSizes([]);
     setFormFeatured(false);
     setFormStock('25');
     setRawImageUrl(SAMPLE_STOCK_PHOTOS[0].url);
@@ -75,7 +77,7 @@ export default function ProductManager({
     setFormPrice(String(product.price));
     setFormDiscountPrice(product.discountPrice ? String(product.discountPrice) : '');
     setFormIsClothing(Boolean(product.isClothing));
-    setFormCategory(product.category || (product.isClothing ? 'Clothing' : 'Accessories'));
+    setFormCategory(product.category || (product.isClothing ? 'Apparel' : 'Fragrances'));
     setFormSizes(product.isClothing && product.sizes?.length ? product.sizes : (product.isClothing ? ['S', 'M', 'L', 'XL'] : []));
     setFormFeatured(Boolean(product.featured));
     setFormStock(String(product.stock || 20));
@@ -89,10 +91,10 @@ export default function ProductManager({
   const handleToggleClothing = (isClothing) => {
     setFormIsClothing(isClothing);
     if (isClothing) {
-      setFormCategory('Clothing');
+      setFormCategory('Apparel');
       if (formSizes.length === 0) setFormSizes(['S', 'M', 'L', 'XL']);
     } else {
-      if (formCategory === 'Clothing') setFormCategory('Accessories');
+      if (formCategory === 'Apparel' || formCategory === 'Clothing') setFormCategory('Fragrances');
       setFormSizes([]); // Non-clothing: sizes strictly empty & hidden
     }
   };
@@ -411,9 +413,11 @@ export default function ProductManager({
                   onChange={(e) => setFormCategory(e.target.value)}
                   className="w-full px-3.5 py-2 rounded-xl border border-neutral-300 text-sm bg-white focus:outline-none focus:border-neutral-950 cursor-pointer"
                 >
-                  <option value="Clothing">Clothing</option>
+                  <option value="Fragrances">Fragrances</option>
+                  <option value="Apparel">Apparel</option>
+                  <option value="Gift Sets">Gift Sets</option>
                   <option value="Accessories">Accessories</option>
-                  <option value="Gear">Gear</option>
+                  <option value="Clothing">Clothing</option>
                 </select>
               </div>
               <div>

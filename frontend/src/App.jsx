@@ -32,102 +32,102 @@ import BackendStatus from './components/AdminPanel/BackendStatus';
 const INITIAL_PRODUCTS = [
   {
     id: 1,
-    title: 'Heavyweight Oversized Hoodie',
-    subtitle: '480GSM French Terry • Drop Shoulder',
-    price: 3200,
-    discountPrice: 2650,
-    isClothing: true,
-    category: 'Clothing',
-    sizes: ['S', 'M', 'L', 'XL'],
+    title: 'Oud Royale Extrait de Parfum',
+    subtitle: 'Pure Cambodian Oud • Damask Rose • Smoked Amber • 100ml',
+    price: 5800,
+    discountPrice: 4950,
+    isClothing: false,
+    category: 'Fragrances',
+    sizes: [],
     featured: true,
     stock: 24,
-    imageUrl: 'https://images.unsplash.com/photo-1556821840-3a63f95609a7?auto=format&fit=crop&w=900&q=85',
+    imageUrl: 'https://images.unsplash.com/photo-1592945403244-b3fbafd7f539?auto=format&fit=crop&w=900&q=85',
     cropMeta: { zoom: 1, panX: 0, panY: 0 }
   },
   {
     id: 2,
-    title: 'Matte Black Everyday Backpack',
-    subtitle: 'Ballistic Nylon • 16" Laptop Compartment',
-    price: 4500,
-    discountPrice: 3800,
+    title: 'Velvet Santal Eau de Parfum',
+    subtitle: 'Australian Sandalwood • Cardamom • Tuscan Leather • 100ml',
+    price: 4200,
+    discountPrice: 3650,
     isClothing: false,
-    category: 'Gear',
+    category: 'Fragrances',
     sizes: [],
     featured: true,
-    stock: 15,
-    imageUrl: 'https://images.unsplash.com/photo-1553062407-98eeb64c6a62?auto=format&fit=crop&w=900&q=85',
+    stock: 18,
+    imageUrl: 'https://images.unsplash.com/photo-1547887537-6158d64c35b3?auto=format&fit=crop&w=900&q=85',
     cropMeta: { zoom: 1, panX: 0, panY: 0 }
   },
   {
     id: 3,
-    title: 'Vintage Washed Cargo Pants',
-    subtitle: 'Relaxed Ripstop Weave • 6-Pocket Utility',
-    price: 2950,
-    discountPrice: null,
+    title: 'Signature PerfumeGo Embroidered Hoodie',
+    subtitle: '480GSM French Terry • Gold Crest Monogram Embroidery',
+    price: 3450,
+    discountPrice: 2850,
     isClothing: true,
-    category: 'Clothing',
+    category: 'Apparel',
     sizes: ['S', 'M', 'L', 'XL'],
     featured: true,
-    stock: 18,
-    imageUrl: 'https://images.unsplash.com/photo-1624378439575-d8705ad7ae80?auto=format&fit=crop&w=900&q=85',
+    stock: 25,
+    imageUrl: 'https://images.unsplash.com/photo-1556821840-3a63f95609a7?auto=format&fit=crop&w=900&q=85',
     cropMeta: { zoom: 1, panX: 0, panY: 0 }
   },
   {
     id: 4,
-    title: 'Minimalist Leather Cardholder',
-    subtitle: 'Full-Grain Vegetable Tanned • RFID Shield',
-    price: 1650,
+    title: 'Imperial Amber Noir',
+    subtitle: 'Bourbon Vanilla • Black Amber • Tonka Bean • 50ml',
+    price: 3850,
     discountPrice: null,
     isClothing: false,
-    category: 'Accessories',
+    category: 'Fragrances',
     sizes: [],
     featured: false,
-    stock: 40,
-    imageUrl: 'https://images.unsplash.com/photo-1627123424574-724758594e93?auto=format&fit=crop&w=900&q=85',
+    stock: 35,
+    imageUrl: 'https://images.unsplash.com/photo-1523293182086-7651a899d37f?auto=format&fit=crop&w=900&q=85',
     cropMeta: { zoom: 1, panX: 0, panY: 0 }
   },
   {
     id: 5,
-    title: 'Minimalist Oxford Shirt',
-    subtitle: 'Organic Combed Cotton • Boxy Tailored Fit',
-    price: 2450,
-    discountPrice: 2100,
-    isClothing: true,
-    category: 'Clothing',
-    sizes: ['S', 'M', 'L', 'XL'],
+    title: 'Discovery Quintet Gift Set',
+    subtitle: 'Curated 5 x 10ml Travel Sprays in Luxury Velvet Box',
+    price: 2950,
+    discountPrice: 2450,
+    isClothing: false,
+    category: 'Gift Sets',
+    sizes: [],
     featured: false,
-    stock: 30,
-    imageUrl: 'https://images.unsplash.com/photo-1596755094514-f87e34085b2c?auto=format&fit=crop&w=900&q=85',
+    stock: 40,
+    imageUrl: 'https://images.unsplash.com/photo-1616949755610-8c9bbc08f138?auto=format&fit=crop&w=900&q=85',
     cropMeta: { zoom: 1, panX: 0, panY: 0 }
   },
   {
     id: 6,
-    title: 'Stainless Insulated Tumbler',
-    subtitle: 'Double-Wall Vacuum • 500ml Matte Powder Coat',
-    price: 1850,
-    discountPrice: 1490,
-    isClothing: false,
-    category: 'Gear',
-    sizes: [],
+    title: 'PerfumeGo Crest Minimalist Heavy Tee',
+    subtitle: '280GSM Organic Combed Cotton • Gold Foil PG Monogram',
+    price: 1650,
+    discountPrice: null,
+    isClothing: true,
+    category: 'Apparel',
+    sizes: ['S', 'M', 'L', 'XL'],
     featured: false,
-    stock: 52,
-    imageUrl: 'https://images.unsplash.com/photo-1602143407151-7111542de6e8?auto=format&fit=crop&w=900&q=85',
+    stock: 30,
+    imageUrl: 'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?auto=format&fit=crop&w=900&q=85',
     cropMeta: { zoom: 1, panX: 0, panY: 0 }
   }
 ];
 
 const INITIAL_COUPONS = [
-  { id: 1, code: 'WINTER15', discountPercent: 15, active: true, description: 'Seasonal Campaign 15% Off' },
+  { id: 1, code: 'ROYAL15', discountPercent: 15, active: true, description: 'Grand Launch 15% Off Fragrances' },
   { id: 2, code: 'WELCOME10', discountPercent: 10, active: true, description: 'First Order 10% Welcome Discount' },
   { id: 3, code: 'VIP25', discountPercent: 25, active: false, description: 'VIP Flash Code (Currently Deactivated)' }
 ];
 
 const INITIAL_CAMPAIGN = {
   active: true,
-  badge: 'SEASONAL DROP',
-  headline: 'WINTER DROP CAMPAIGN — Up to 25% OFF Selected Items',
-  subtext: 'Minimalist essentials crafted for everyday utility. Free shipping on orders over ৳5,000.',
-  promoCode: 'WINTER15'
+  badge: 'ROYAL DROP',
+  headline: 'PERFUMEGO GRAND LAUNCH — Complimentary Delivery on all Fragrances',
+  subtext: 'Handcrafted luxury extraits with pure botanical distillations. Exclusive 15% discount code.',
+  promoCode: 'ROYAL15'
 };
 
 const INITIAL_ORDERS = [
@@ -519,7 +519,7 @@ export default function App() {
           />
           <Toast toast={toast} />
           <footer className="py-6 text-center text-xs text-neutral-400 border-t border-neutral-100">
-            MONO.STUDIO • Internal Admin Access Gate
+            PerfumeGo • Internal Admin Access Gate
           </footer>
         </div>
       );
@@ -531,14 +531,14 @@ export default function App() {
         <header className="sticky top-0 z-30 bg-neutral-950 text-white border-b border-neutral-800">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-white text-neutral-950 flex items-center justify-center font-bold text-xs tracking-tighter">
-                M//S
+              <div className="w-9 h-9 rounded-full bg-white/10 p-1 flex items-center justify-center border border-amber-400/20">
+                <img src="/logo.png" alt="PerfumeGo Logo" className="w-full h-full object-contain" />
               </div>
               <div>
-                <span className="font-bold text-sm tracking-tight block leading-tight">
-                  MONO.STUDIO ADMIN
+                <span className="font-bold text-sm tracking-tight block leading-tight font-serif">
+                  Perfume<span className="text-amber-400">Go</span> Admin
                 </span>
-                <span className="text-[10px] text-neutral-400 uppercase tracking-widest block">
+                <span className="text-[10px] text-amber-200/60 uppercase tracking-widest block">
                   Secure Portal (/admin)
                 </span>
               </div>
@@ -880,14 +880,21 @@ export default function App() {
         <div className="max-w-7xl mx-auto space-y-8">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
             <div className="space-y-3 md:col-span-2">
-              <div className="flex items-center gap-2">
-                <div className="w-6 h-6 rounded-md bg-neutral-950 text-white flex items-center justify-center font-bold text-xs tracking-tighter">
-                  M//S
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-full bg-neutral-900/5 p-1 flex items-center justify-center border border-amber-900/10">
+                  <img src="/logo.png" alt="PerfumeGo" className="w-full h-full object-contain" />
                 </div>
-                <span className="font-bold text-sm text-neutral-950 tracking-tight">MONO.STUDIO</span>
+                <div>
+                  <span className="font-extrabold text-base text-neutral-950 tracking-tight font-serif block leading-none">
+                    Perfume<span className="text-amber-700">Go</span>
+                  </span>
+                  <span className="text-[9.5px] text-amber-900/80 font-medium tracking-widest uppercase block mt-1">
+                    Luxury Fragrance House
+                  </span>
+                </div>
               </div>
               <p className="text-neutral-500 max-w-sm text-xs leading-relaxed">
-                Apparel and everyday carry objects engineered with minimal aesthetics, heavyweight fabrics, and uncompromising functional detail. Based in Dhaka, Bangladesh.
+                Curated luxury perfumes, artisanal extraits, and premium fragrance objects crafted with exceptional essences and timeless sophistication. Based in Dhaka, Bangladesh.
               </p>
             </div>
 
@@ -916,7 +923,7 @@ export default function App() {
 
           <div className="pt-8 border-t border-neutral-100 flex flex-col sm:flex-row items-center justify-between gap-4 text-[11px] text-neutral-400">
             <div>
-              © {new Date().getFullYear()} MONO.STUDIO. All rights reserved.
+              © {new Date().getFullYear()} PerfumeGo. All rights reserved.
             </div>
             <div>
               Cash on Delivery (COD) Verified

@@ -1,23 +1,26 @@
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 
-const JWT_SECRET = process.env.JWT_SECRET || 'mono_studio_secure_admin_jwt_secret_key_2026';
+const JWT_SECRET = process.env.JWT_SECRET || 'perfumego_secure_admin_jwt_secret_key_2026';
 
 // Helper to parse ADMIN_USERS from environment variations
 function getAdminsFromEnv() {
   const envVal = process.env.ADMIN_USERS;
   if (!envVal) {
     // Default demo admin fallback if environment variable is not yet configured
-    // Note: $2a$10$w0/5... is bcrypt hash of 'admin12345!'
     return [
       {
+        email: 'admin@perfumego.com',
+        passwordRaw: 'admin12345!',
+        name: 'PerfumeGo Master Admin'
+      },
+      {
         email: 'admin@mono.studio',
-        passwordHash: '$2a$10$6rXgLh4Xg7y9G0K6n8iK0.yW9X5wN6Z7A8B9C0D1E2F3G4H5I6J7K', // or plaintext fallback
         passwordRaw: 'admin12345!',
         name: 'Master Admin'
       },
       {
-        email: 'toufik@mono.studio',
+        email: 'toufik@perfumego.com',
         passwordRaw: 'toufikSecure2026!',
         name: 'Toufik'
       }

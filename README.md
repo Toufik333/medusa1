@@ -1,4 +1,4 @@
-# MONO.STUDIO — Modern Minimalist Storefront & 4:5 Admin Post Studio
+# PerfumeGo — Luxury Fragrance House & 4:5 Admin Post Studio
 
 A complete, production-ready full-stack e-commerce application built with **React + Vite + Tailwind CSS** (Frontend) and **Node.js + Express + PostgreSQL** (Backend).
 
@@ -6,11 +6,20 @@ Designed for zero-friction deployment on **Vercel** (Frontend) and **Heroku** (B
 
 ---
 
+## Brand Identity & Assets
+
+- **Brand Name**: PerfumeGo
+- **Brand Monogram**: Circular PG luxury gold crest encircled by botanical wreaths
+- **Logo Asset**: `frontend/public/logo.png`
+- **Favicon Assets**: `frontend/public/favicon.png` & `frontend/public/favicon-32x32.png`
+
+---
+
 ## Key Features
 
 1. **Dedicated & Isolated Admin Portal (`/admin`)**:
    - The Admin Panel is completely separated from the storefront customer experience.
-   - Accessing `/admin` requires passing through a modern, secure login gate.
+   - Accessing `/admin` requires passing through a modern, secure login gate with the PerfumeGo brand seal.
    - Customers browsing the storefront (`/`) experience a clean, distraction-free shop with zero internal controls, test badges, or developer cues.
    - Authenticated admins can inspect live orders, manage inventory, create coupons, and configure seasonal campaign banners.
    - Signed-in admin bar displays active identity with a one-click **Sign Out** button.
@@ -31,16 +40,16 @@ Designed for zero-friction deployment on **Vercel** (Frontend) and **Heroku** (B
 
 4. **Strict 4:5 Uniform Image Cropping & Alignment**:
    - Built-in interactive 4:5 aspect ratio image cropper in the Admin Post Studio with mouse/touch drag-to-pan and zoom controls.
-   - Live side-by-side card preview ensures every photo is identically proportioned before publishing so no card ever looks stretched, uneven, or misaligned on the storefront.
+   - Live side-by-side card preview ensures every perfume bottle photo is identically proportioned before publishing so no card ever looks stretched, uneven, or misaligned on the storefront.
    - Canvas-based 4:5 export (800×1000px) directly saves cropped data.
 
 5. **Conditional Clothing Size Selector**:
    - **Clothing / Apparel**: Admin can toggle S, M, L, XL sizes. On the storefront, the product card displays interactive size selector pills and requires the customer to choose a size before adding to bag.
-   - **Non-Clothing (Accessories / Gear)**: Size options are **strictly hidden** in both the Admin post form and storefront cards, displaying a minimal "Universal Spec" badge instead.
+   - **Non-Clothing (Perfumes, Extraits, Gift Sets)**: Size options are **strictly hidden** in both the Admin post form and storefront cards, displaying a minimal "Universal Spec" badge instead.
 
 6. **Curated Featured Board & Search**:
-   - Curated drop highlights with star badges.
-   - Real-time search across titles, subtitles, and categories.
+   - Curated perfume drop highlights with star badges.
+   - Real-time search across titles, notes, and categories.
 
 7. **Special Discount Campaign Manager**:
    - Admin can activate/pause a top announcement bar and hero banner.
@@ -62,17 +71,17 @@ In your `backend/.env` (or Heroku Config Vars):
 
 ```env
 # Admin Users (JSON array or comma-separated)
-ADMIN_USERS='[{"email":"admin@mono.studio","password":"admin12345!","name":"Master Admin"},{"email":"toufik@mono.studio","password":"toufikSecure2026!","name":"Toufik"}]'
+ADMIN_USERS='[{"email":"admin@perfumego.com","password":"admin12345!","name":"Master Admin"},{"email":"toufik@perfumego.com","password":"toufikSecure2026!","name":"Toufik"}]'
 
 # JWT Secret for signing admin sessions
-JWT_SECRET=your_super_secret_jwt_key_here
+JWT_SECRET=perfumego_super_secret_jwt_key_2026_production
 ```
 
 ### Pre-configured Demo Admins for Testing:
 | Admin Name | Email | Password |
 |---|---|---|
-| Master Admin | `admin@mono.studio` | `admin12345!` |
-| Toufik | `toufik@mono.studio` | `toufikSecure2026!` |
+| Master Admin | `admin@perfumego.com` | `admin12345!` |
+| Toufik | `toufik@perfumego.com` | `toufikSecure2026!` |
 
 ---
 
@@ -97,15 +106,15 @@ npm run dev:frontend
 
 1. **Create Heroku App & Provision Postgres**:
    ```bash
-   heroku create your-mono-store-api
+   heroku create perfumego-api
    heroku addons:create heroku-postgresql:essential-0
    ```
 
 2. **Configure Environment Variables**:
    ```bash
-   heroku config:set ADMIN_USERS='[{"email":"admin@mono.studio","password":"YourSecretPassword","name":"Admin"}]'
+   heroku config:set ADMIN_USERS='[{"email":"admin@perfumego.com","password":"YourSecretPassword","name":"Admin"}]'
    heroku config:set JWT_SECRET=random_secure_jwt_secret_key_64_chars
-   heroku config:set ALLOWED_ORIGIN=https://your-store.vercel.app
+   heroku config:set ALLOWED_ORIGIN=https://perfumego.vercel.app
    ```
 
 3. **Deploy Backend Subtree**:
@@ -119,6 +128,6 @@ npm run dev:frontend
 2. Set **Root Directory** to `frontend`.
 3. In **Environment Variables**, set:
    ```env
-   VITE_API_URL=https://your-mono-store-api.herokuapp.com
+   VITE_API_URL=https://perfumego-api.herokuapp.com
    ```
 4. Deploy!
