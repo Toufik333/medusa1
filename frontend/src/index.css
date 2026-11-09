@@ -5,10 +5,28 @@
 @layer base {
   body {
     font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+    -webkit-text-size-adjust: 100%;
   }
   code, pre, .font-mono {
     font-family: 'JetBrains Mono', monospace;
   }
+}
+
+/* Prevent auto-zooming on focus in mobile browsers (iOS Safari / Chrome) */
+@media screen and (max-width: 768px) {
+  input,
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
+}
+
+/* Eliminate tap-to-zoom delays and unwanted zoom gestures */
+input,
+textarea,
+select,
+button {
+  touch-action: manipulation;
 }
 
 /* Hide scrollbar for category tabs on mobile */
@@ -19,4 +37,3 @@
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
-
