@@ -19,6 +19,7 @@ import Navbar from './components/Navbar';
 import CampaignBanner from './components/CampaignBanner';
 import FeaturedBoard from './components/FeaturedBoard';
 import ProductCard from './components/ProductCard';
+import ProductDetail from './components/ProductDetail';
 import CartDrawer from './components/CartDrawer';
 import Toast from './components/Toast';
 import AdminLogin from './components/AdminPanel/AdminLogin';
@@ -152,9 +153,11 @@ const INITIAL_ORDERS = [
 ];
 
 export default function App() {
-  // Path-based Routing: '/' or '/admin'
+  // Path-based Routing: '/', '/admin', or '/product/:id'
   const [currentPath, setCurrentPath] = useState(window.location.pathname);
   const isAdminRoute = currentPath.startsWith('/admin');
+  const isProductRoute = currentPath.startsWith('/product/');
+  const activeProductId = isProductRoute ? currentPath.replace('/product/', '').split('/')[0] : null;
 
   // Admin Auth State
   const [adminUser, setAdminUser] = useState(() => authStorage.getAdmin());
@@ -174,6 +177,10 @@ export default function App() {
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [selectedSizes, setSelectedSizes] = useState({});
   const [sizePromptError, setSizePromptError] = useState(null);
+
+  const activeProduct = activeProductId
+    ? products.find((p) => String(p.id) === String(activeProductId))
+    : null;
 
   // Cart & Checkout (clean empty bag by default)
   const [cart, setCart] = useState([]);
@@ -299,27 +306,38 @@ export default function App() {
   };
 
   // Cart operations
-  const handleAddToCart = (product) => {
-    let chosenSize = null;
-    if (product.isClothing) {
-      chosenSize = selectedSizes[product.id];
-      if (!chosenSize) {
+  const handleAddToCart = (product, explicitOption = null, qtyToAdd = 1, explicitPrice = null) => {
+    const rawOptions = product.attributes?.options && product.attributes.options.length > 0
+      ? product.attributes.options
+      : (product.sizes && product.sizes.length > 0
+          ? product.sizes.map((s) => ({ name: s, price: null }))
+          : []);
+
+    let chosenOption = explicitOption || selectedSizes[product.id] || null;
+
+    if (!chosenOption && rawOptions.length > 0) {
+      if (product.isClothing) {
         setSizePromptError(product.id);
-        const sizesAvail = product.sizes?.length ? product.sizes.join('/') : 'S/M/L/XL';
+        const sizesAvail = rawOptions.map((o) => o.name).join('/');
         showToast(`Please select a size (${sizesAvail}) for ${product.title}`, 'error');
         return;
+      } else {
+        chosenOption = rawOptions[0].name;
       }
     }
 
     setSizePromptError(null);
-    const effectivePrice = product.discountPrice || product.price;
-    const cartItemId = product.isClothing ? `${product.id}-${chosenSize}` : String(product.id);
+
+    const matchedOpt = rawOptions.find((o) => o.name === chosenOption);
+    const effectivePrice = explicitPrice || (matchedOpt?.price && matchedOpt.price > 0 ? matchedOpt.price : (product.discountPrice || product.price));
+
+    const cartItemId = chosenOption ? `${product.id}-${chosenOption}` : String(product.id);
 
     setCart((prev) => {
       const existing = prev.find((item) => item.cartItemId === cartItemId);
       if (existing) {
         return prev.map((item) =>
-          item.cartItemId === cartItemId ? { ...item, qty: item.qty + 1 } : item
+          item.cartItemId === cartItemId ? { ...item, qty: item.qty + qtyToAdd } : item
         );
       }
       return [
@@ -332,14 +350,25 @@ export default function App() {
           regularPrice: product.price,
           imageUrl: product.imageUrl,
           cropMeta: product.cropMeta,
-          isClothing: product.isClothing,
-          size: chosenSize,
-          qty: 1
+          isClothing: Boolean(product.isClothing),
+          size: chosenOption,
+          attributeName: product.attributes?.name || (product.isClothing ? 'Size' : 'Volume'),
+          qty: qtyToAdd
         }
       ];
     });
 
-    showToast(`Added ${product.title}${chosenSize ? ` (${chosenSize})` : ''} to bag`);
+    showToast(`Added ${product.title}${chosenOption ? ` (${chosenOption})` : ''} to bag`);
+  };
+
+  const handleBuyNow = (cartPayload) => {
+    handleAddToCart(
+      cartPayload,
+      cartPayload.selectedOption || cartPayload.size || null,
+      cartPayload.qty || 1,
+      cartPayload.price
+    );
+    setIsCartOpen(true);
   };
 
   const handleUpdateCartQty = (cartItemId, delta) => {
@@ -711,9 +740,15 @@ export default function App() {
       {/* 2. Customer Header */}
       <Navbar
         selectedCategory={selectedCategory}
-        setSelectedCategory={setSelectedCategory}
+        setSelectedCategory={(cat) => {
+          setSelectedCategory(cat);
+          if (isProductRoute) navigateTo('/');
+        }}
         searchQuery={searchQuery}
-        setSearchQuery={setSearchQuery}
+        setSearchQuery={(q) => {
+          setSearchQuery(q);
+          if (isProductRoute) navigateTo('/');
+        }}
         cartCount={cartCount}
         onOpenCart={() => {
           setCheckoutSuccessOrder(null);
@@ -721,154 +756,177 @@ export default function App() {
         }}
       />
 
-      {/* 3. Main Storefront Content */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-8 space-y-12">
-        {/* Production Hero Section */}
-        <section className="relative rounded-3xl bg-neutral-950 text-white p-6 sm:p-12 overflow-hidden border border-neutral-800 shadow-sm">
-          <div className="relative z-10 max-w-2xl space-y-4">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 text-amber-300 text-xs font-medium">
-              <Sparkles className="w-3.5 h-3.5" />
-              <span>STUDIO SERIES • 2026 DROP</span>
-            </div>
-            <h1 className="text-3xl sm:text-5xl font-extrabold tracking-tight leading-tight">
-              {campaign.active ? campaign.headline : 'Minimalist Apparel & Everyday Carry.'}
-            </h1>
-            <p className="text-neutral-300 text-sm sm:text-base leading-relaxed">
-              {campaign.active
-                ? campaign.subtext
-                : 'Designed for durability and clean aesthetics. Studio apparel crafted with tailored sizing and universal everyday carry objects.'}
-            </p>
-            <div className="pt-2 flex flex-wrap items-center gap-3">
-              <a
-                href="#catalog-section"
-                className="px-6 py-3 rounded-xl bg-white text-neutral-950 font-bold text-xs sm:text-sm hover:bg-neutral-200 transition shadow-sm"
-              >
-                Shop Collection
-              </a>
-            </div>
-          </div>
-          <div className="absolute -right-10 -bottom-10 w-80 h-80 bg-gradient-to-tr from-amber-500/20 to-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
-        </section>
-
-        {/* Feature Badges */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
-          <div className="p-4 rounded-2xl bg-white border border-neutral-200/80 flex items-center gap-3.5">
-            <div className="w-10 h-10 rounded-xl bg-neutral-100 flex items-center justify-center shrink-0">
-              <Truck className="w-5 h-5 text-neutral-900" />
-            </div>
-            <div>
-              <div className="font-bold text-xs text-neutral-950">Cash on Delivery</div>
-              <div className="text-[11px] text-neutral-500">Pay when your parcel arrives</div>
-            </div>
-          </div>
-
-          <div className="p-4 rounded-2xl bg-white border border-neutral-200/80 flex items-center gap-3.5">
-            <div className="w-10 h-10 rounded-xl bg-neutral-100 flex items-center justify-center shrink-0">
-              <CheckCircle2 className="w-5 h-5 text-neutral-900" />
-            </div>
-            <div>
-              <div className="font-bold text-xs text-neutral-950">100% Genuine Quality</div>
-              <div className="text-[11px] text-neutral-500">Heavyweight combed fabrics</div>
-            </div>
-          </div>
-
-          <div className="p-4 rounded-2xl bg-white border border-neutral-200/80 flex items-center gap-3.5">
-            <div className="w-10 h-10 rounded-xl bg-neutral-100 flex items-center justify-center shrink-0">
-              <RotateCcw className="w-5 h-5 text-neutral-900" />
-            </div>
-            <div>
-              <div className="font-bold text-xs text-neutral-950">Hassle-Free Exchange</div>
-              <div className="text-[11px] text-neutral-500">Easy size replacement support</div>
-            </div>
-          </div>
-        </div>
-
-        {/* Featured Board */}
-        {selectedCategory === 'All' && !searchQuery && (
-          <FeaturedBoard
-            featuredProducts={featuredProducts}
-            selectedSizes={selectedSizes}
-            onSelectSize={(prodId, size) => {
-              setSelectedSizes((prev) => ({ ...prev, [prodId]: size }));
-              if (sizePromptError === prodId) setSizePromptError(null);
-            }}
-            sizePromptError={sizePromptError}
-            onAddToCart={handleAddToCart}
-          />
-        )}
-
-        {/* Store Catalog */}
-        <section id="catalog-section" className="space-y-5">
-          <div className="flex flex-wrap items-end justify-between gap-4 border-b border-neutral-200 pb-3">
-            <div>
-              <span className="text-xs font-semibold uppercase tracking-widest text-neutral-400">
-                Studio Catalog
-              </span>
-              <h2 className="text-xl sm:text-2xl font-bold tracking-tight mt-0.5">
-                {selectedCategory === 'All' ? 'Complete Collection' : selectedCategory}
-              </h2>
-            </div>
-
-            {/* Active Coupons Bar */}
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="text-xs text-neutral-500">Active Coupons:</span>
-              {coupons
-                .filter((c) => c.active)
-                .map((c) => (
-                  <button
-                    key={c.id}
-                    type="button"
-                    onClick={() => {
-                      setCouponInput(c.code);
-                      handleApplyCoupon(c.code);
-                      setIsCartOpen(true);
-                    }}
-                    className="text-xs px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-200 font-mono font-semibold hover:bg-emerald-100 transition cursor-pointer"
-                  >
-                    {c.code} ({c.discountPercent}% OFF)
-                  </button>
-                ))}
-            </div>
-          </div>
-
-          {filteredProducts.length === 0 ? (
-            <div className="bg-white rounded-2xl border border-neutral-200 p-12 text-center space-y-3">
-              <Package className="w-10 h-10 text-neutral-300 mx-auto" />
-              <h3 className="font-semibold text-base">No matching products found</h3>
-              <p className="text-xs text-neutral-500 max-w-sm mx-auto">
-                Try clearing your search query or choosing another category.
+      {isProductRoute ? (
+        <main className="flex-1 max-w-7xl w-full mx-auto">
+          {activeProduct ? (
+            <ProductDetail
+              product={activeProduct}
+              onBack={() => navigateTo('/')}
+              onAddToCart={(prod, optName, qty, price) => {
+                handleAddToCart(prod, optName, qty, price);
+              }}
+              onBuyNow={handleBuyNow}
+              showToast={showToast}
+            />
+          ) : (
+            <div className="max-w-md mx-auto py-24 px-4 text-center space-y-4">
+              <Package className="w-12 h-12 text-neutral-300 mx-auto" />
+              <h2 className="text-xl font-bold text-neutral-900">Product Not Found</h2>
+              <p className="text-xs text-neutral-500">
+                The product you are trying to view might have been moved or removed.
               </p>
               <button
                 type="button"
-                onClick={() => {
-                  setSearchQuery('');
-                  setSelectedCategory('All');
-                }}
-                className="px-4 py-2 rounded-xl bg-neutral-950 text-white text-xs font-medium cursor-pointer"
+                onClick={() => navigateTo('/')}
+                className="px-5 py-2.5 rounded-xl bg-neutral-950 text-white text-xs font-semibold hover:bg-neutral-800 transition cursor-pointer"
               >
-                Reset Filters
+                Back to Storefront
               </button>
             </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredProducts.map((product) => (
-                <ProductCard
-                  key={`prod-${product.id}`}
-                  product={product}
-                  isFeatured={false}
-                  selectedSize={selectedSizes[product.id]}
-                  onSelectSize={(prodId, size) => {
-                    setSelectedSizes((prev) => ({ ...prev, [prodId]: size }));
-                    if (sizePromptError === prodId) setSizePromptError(null);
-                  }}
-                  needsSizePrompt={sizePromptError === product.id}
-                  onAddToCart={handleAddToCart}
-                />
-              ))}
-            </div>
           )}
-        </section>
-      </main>
+        </main>
+      ) : (
+        /* 3. Main Storefront Content */
+        <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-4 sm:py-8 space-y-8 sm:space-y-12">
+          {/* Sleek, Non-Distracting Banner (Thin on Mobile, Elegant on Desktop) */}
+          <section className="relative rounded-2xl sm:rounded-3xl bg-gradient-to-r from-neutral-950 via-neutral-900 to-neutral-950 text-white p-3.5 sm:p-8 overflow-hidden border border-neutral-800 shadow-sm">
+            <div className="relative z-10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-6">
+              <div className="space-y-1 sm:space-y-2">
+                <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-400/10 text-amber-300 text-[10px] sm:text-xs font-semibold tracking-wide">
+                  <Sparkles className="w-3 h-3 text-amber-300" />
+                  <span>PERFUMEGO GRAND COLLECTION</span>
+                </div>
+                <h1 className="text-base sm:text-2xl md:text-3xl font-extrabold tracking-tight text-white leading-snug">
+                  {campaign.active ? campaign.headline : 'Artisanal Luxury Perfumes & Signature Apparel'}
+                </h1>
+                <p className="hidden sm:block text-neutral-300 text-xs sm:text-sm leading-relaxed max-w-xl">
+                  {campaign.active
+                    ? campaign.subtext
+                    : 'Handcrafted luxury extraits with pure botanical distillations. Fast Cash on Delivery across Bangladesh.'}
+                </p>
+              </div>
+              <div className="shrink-0">
+                <a
+                  href="#catalog-section"
+                  className="inline-flex items-center px-4 py-2 sm:px-5 sm:py-2.5 rounded-xl bg-amber-400 text-neutral-950 font-bold text-xs sm:text-sm hover:bg-amber-300 transition shadow-sm"
+                >
+                  Shop Collection
+                </a>
+              </div>
+            </div>
+            <div className="absolute -right-10 -bottom-10 w-60 h-60 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
+          </section>
+
+          {/* Feature Badges - Single Thin Line Bar */}
+          <div className="rounded-xl sm:rounded-2xl bg-white border border-neutral-200/90 px-3 py-2 sm:py-2.5 shadow-xs">
+            <div className="flex items-center justify-between gap-2 overflow-x-auto no-scrollbar text-[11px] sm:text-xs font-medium text-neutral-700 divide-x divide-neutral-200">
+              <div className="flex items-center gap-1.5 shrink-0 px-2 first:pl-0">
+                <Truck className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-600 shrink-0" />
+                <span className="font-bold text-neutral-950">Cash on Delivery</span>
+                <span className="hidden md:inline text-neutral-400 font-normal">• All over BD</span>
+              </div>
+              <div className="flex items-center gap-1.5 shrink-0 px-2">
+                <CheckCircle2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-600 shrink-0" />
+                <span className="font-bold text-neutral-950">100% Genuine Quality</span>
+                <span className="hidden md:inline text-neutral-400 font-normal">• Guaranteed</span>
+              </div>
+              <div className="flex items-center gap-1.5 shrink-0 px-2 last:pr-0">
+                <RotateCcw className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-indigo-600 shrink-0" />
+                <span className="font-bold text-neutral-950">Hassle-Free Exchange</span>
+                <span className="hidden md:inline text-neutral-400 font-normal">• Easy Support</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Featured Board */}
+          {selectedCategory === 'All' && !searchQuery && (
+            <FeaturedBoard
+              featuredProducts={featuredProducts}
+              selectedSizes={selectedSizes}
+              onSelectSize={(prodId, size) => {
+                setSelectedSizes((prev) => ({ ...prev, [prodId]: size }));
+                if (sizePromptError === prodId) setSizePromptError(null);
+              }}
+              sizePromptError={sizePromptError}
+              onAddToCart={handleAddToCart}
+              onOpenProduct={(prod) => navigateTo(`/product/${prod.id}`)}
+            />
+          )}
+
+          {/* Store Catalog */}
+          <section id="catalog-section" className="space-y-5">
+            <div className="flex flex-wrap items-end justify-between gap-4 border-b border-neutral-200 pb-3">
+              <div>
+                <span className="text-xs font-semibold uppercase tracking-widest text-neutral-400">
+                  Studio Catalog
+                </span>
+                <h2 className="text-xl sm:text-2xl font-bold tracking-tight mt-0.5">
+                  {selectedCategory === 'All' ? 'Complete Collection' : selectedCategory}
+                </h2>
+              </div>
+
+              {/* Active Coupons Bar */}
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-xs text-neutral-500">Active Coupons:</span>
+                {coupons
+                  .filter((c) => c.active)
+                  .map((c) => (
+                    <button
+                      key={c.id}
+                      type="button"
+                      onClick={() => {
+                        setCouponInput(c.code);
+                        handleApplyCoupon(c.code);
+                        setIsCartOpen(true);
+                      }}
+                      className="text-xs px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-200 font-mono font-semibold hover:bg-emerald-100 transition cursor-pointer"
+                    >
+                      {c.code} ({c.discountPercent}% OFF)
+                    </button>
+                  ))}
+              </div>
+            </div>
+
+            {filteredProducts.length === 0 ? (
+              <div className="bg-white rounded-2xl border border-neutral-200 p-12 text-center space-y-3">
+                <Package className="w-10 h-10 text-neutral-300 mx-auto" />
+                <h3 className="font-semibold text-base">No matching products found</h3>
+                <p className="text-xs text-neutral-500 max-w-sm mx-auto">
+                  Try clearing your search query or choosing another category.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSearchQuery('');
+                    setSelectedCategory('All');
+                  }}
+                  className="px-4 py-2 rounded-xl bg-neutral-950 text-white text-xs font-medium cursor-pointer"
+                >
+                  Reset Filters
+                </button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                {filteredProducts.map((product) => (
+                  <ProductCard
+                    key={`prod-${product.id}`}
+                    product={product}
+                    isFeatured={false}
+                    selectedSize={selectedSizes[product.id]}
+                    onSelectSize={(prodId, size) => {
+                      setSelectedSizes((prev) => ({ ...prev, [prodId]: size }));
+                      if (sizePromptError === prodId) setSizePromptError(null);
+                    }}
+                    needsSizePrompt={sizePromptError === product.id}
+                    onAddToCart={handleAddToCart}
+                    onOpenProduct={(prod) => navigateTo(`/product/${prod.id}`)}
+                  />
+                ))}
+              </div>
+            )}
+          </section>
+        </main>
+      )}
 
       {/* Cart & Checkout Drawer */}
       <CartDrawer

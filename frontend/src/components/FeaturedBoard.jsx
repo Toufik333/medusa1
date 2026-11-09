@@ -7,24 +7,25 @@ export default function FeaturedBoard({
   selectedSizes,
   onSelectSize,
   sizePromptError,
-  onAddToCart
+  onAddToCart,
+  onOpenProduct
 }) {
   if (!featuredProducts || featuredProducts.length === 0) return null;
 
   return (
-    <section className="space-y-5">
-      <div className="flex items-end justify-between border-b border-neutral-200 pb-3">
+    <section className="space-y-4">
+      <div className="flex items-end justify-between border-b border-neutral-200 pb-2.5">
         <div>
-          <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-amber-600">
+          <div className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-widest text-amber-600">
             <Star className="w-3.5 h-3.5 fill-amber-500 text-amber-500" />
             <span>Curated Highlights</span>
           </div>
-          <h2 className="text-xl sm:text-2xl font-bold tracking-tight mt-0.5">
+          <h2 className="text-xl sm:text-2xl font-bold tracking-tight mt-0.5 font-serif">
             Featured Board
           </h2>
         </div>
         <span className="text-xs text-neutral-500">
-          {featuredProducts.length} Curated Drops
+          {featuredProducts.length} Signature Creations
         </span>
       </div>
 
@@ -38,10 +39,10 @@ export default function FeaturedBoard({
             onSelectSize={onSelectSize}
             needsSizePrompt={sizePromptError === product.id}
             onAddToCart={onAddToCart}
+            onOpenProduct={onOpenProduct}
           />
         ))}
       </div>
     </section>
   );
 }
-

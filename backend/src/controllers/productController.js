@@ -4,6 +4,21 @@ const { memoryStore } = require('../db/initDb');
 // Helper to normalize product format
 function formatProduct(row) {
   if (!row) return null;
+  let attributes = null;
+  if (row.attributes) {
+    try {
+      attributes = typeof row.attributes === 'string' ? JSON.parse(row.attributes) : row.attributes;
+    } catch {
+      attributes = null;
+    }
+  }
+  if (!attributes && Array.isArray(row.sizes) && row.sizes.length > 0) {
+    attributes = {
+      name: row.is_clothing ? 'Size' : 'Volume',
+      options: row.sizes.map((s) => ({ name: s, price: null }))
+    };
+  }
+
   return {
     id: row.id,
     title: row.title,
@@ -13,6 +28,7 @@ function formatProduct(row) {
     isClothing: Boolean(row.is_clothing),
     category: row.category,
     sizes: Array.isArray(row.sizes) ? row.sizes : [],
+    attributes: attributes || { name: 'Size', options: [] },
     featured: Boolean(row.featured),
     stock: Number(row.stock || 0),
     imageUrl: row.image_url,
@@ -103,6 +119,7 @@ exports.createProduct = async (req, res) => {
       isClothing,
       category,
       sizes,
+      attributes,
       featured,
       stock,
       imageUrl,
@@ -114,18 +131,37 @@ exports.createProduct = async (req, res) => {
     }
 
     const clothingBool = Boolean(isClothing);
-    // Clothing items: sizes must be populated. Non-clothing: strictly empty
-    const normalizedSizes = clothingBool
-      ? (Array.isArray(sizes) && sizes.length > 0 ? sizes : ['S', 'M', 'L', 'XL'])
-      : [];
+    
+    // Normalize custom attributes & variations
+    let normalizedAttributes = null;
+    if (attributes && typeof attributes === 'object') {
+      const name = attributes.name ? String(attributes.name).trim() : (clothingBool ? 'Size' : 'Volume');
+      const options = Array.isArray(attributes.options)
+        ? attributes.options
+            .filter((o) => o && o.name && String(o.name).trim().length > 0)
+            .map((o) => ({
+              name: String(o.name).trim(),
+              price: o.price && !isNaN(o.price) && Number(o.price) > 0 ? Math.round(Number(o.price)) : null
+            }))
+        : [];
+      normalizedAttributes = { name, options };
+    } else if (Array.isArray(sizes) && sizes.length > 0) {
+      normalizedAttributes = {
+        name: clothingBool ? 'Size' : 'Volume',
+        options: sizes.map((s) => ({ name: String(s).trim(), price: null }))
+      };
+    } else {
+      normalizedAttributes = { name: clothingBool ? 'Size' : 'Volume', options: [] };
+    }
 
+    const normalizedSizes = normalizedAttributes.options.map((o) => o.name);
     const normalizedCrop = cropMeta || { zoom: 1, panX: 0, panY: 0 };
 
     if (db.isPostgres()) {
       const result = await db.query(
         `INSERT INTO products (
-          title, subtitle, price, discount_price, is_clothing, category, sizes, featured, stock, image_url, crop_meta
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+          title, subtitle, price, discount_price, is_clothing, category, sizes, attributes, featured, stock, image_url, crop_meta
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
         RETURNING *`,
         [
           title.trim(),
@@ -135,6 +171,7 @@ exports.createProduct = async (req, res) => {
           clothingBool,
           category ? category.trim() : (clothingBool ? 'Apparel' : 'Fragrances'),
           normalizedSizes,
+          JSON.stringify(normalizedAttributes),
           Boolean(featured),
           Number(stock || 15),
           imageUrl,
@@ -150,11 +187,12 @@ exports.createProduct = async (req, res) => {
       id: newId,
       title: title.trim(),
       subtitle: subtitle ? subtitle.trim() : null,
-      price: Number(price),
-      discount_price: discountPrice ? Number(discountPrice) : null,
+      price: Math.round(Number(price)),
+      discount_price: discountPrice ? Math.round(Number(discountPrice)) : null,
       is_clothing: clothingBool,
-      category: category || (clothingBool ? 'Clothing' : 'Accessories'),
+      category: category ? category.trim() : (clothingBool ? 'Apparel' : 'Fragrances'),
       sizes: normalizedSizes,
+      attributes: normalizedAttributes,
       featured: Boolean(featured),
       stock: Number(stock || 15),
       image_url: imageUrl,
@@ -181,6 +219,7 @@ exports.updateProduct = async (req, res) => {
       isClothing,
       category,
       sizes,
+      attributes,
       featured,
       stock,
       imageUrl,
@@ -188,9 +227,30 @@ exports.updateProduct = async (req, res) => {
     } = req.body;
 
     const clothingBool = Boolean(isClothing);
-    const normalizedSizes = clothingBool
-      ? (Array.isArray(sizes) && sizes.length > 0 ? sizes : ['S', 'M', 'L', 'XL'])
-      : [];
+    
+    // Normalize custom attributes & variations
+    let normalizedAttributes = null;
+    if (attributes && typeof attributes === 'object') {
+      const name = attributes.name ? String(attributes.name).trim() : (clothingBool ? 'Size' : 'Volume');
+      const options = Array.isArray(attributes.options)
+        ? attributes.options
+            .filter((o) => o && o.name && String(o.name).trim().length > 0)
+            .map((o) => ({
+              name: String(o.name).trim(),
+              price: o.price && !isNaN(o.price) && Number(o.price) > 0 ? Math.round(Number(o.price)) : null
+            }))
+        : [];
+      normalizedAttributes = { name, options };
+    } else if (Array.isArray(sizes) && sizes.length > 0) {
+      normalizedAttributes = {
+        name: clothingBool ? 'Size' : 'Volume',
+        options: sizes.map((s) => ({ name: String(s).trim(), price: null }))
+      };
+    } else {
+      normalizedAttributes = { name: clothingBool ? 'Size' : 'Volume', options: [] };
+    }
+
+    const normalizedSizes = normalizedAttributes.options.map((o) => o.name);
     const normalizedCrop = cropMeta || { zoom: 1, panX: 0, panY: 0 };
 
     if (db.isPostgres()) {
@@ -203,12 +263,13 @@ exports.updateProduct = async (req, res) => {
           is_clothing = $5,
           category = $6,
           sizes = $7,
-          featured = $8,
-          stock = $9,
-          image_url = $10,
-          crop_meta = $11,
+          attributes = $8,
+          featured = $9,
+          stock = $10,
+          image_url = $11,
+          crop_meta = $12,
           updated_at = CURRENT_TIMESTAMP
-        WHERE id = $12
+        WHERE id = $13
         RETURNING *`,
         [
           title.trim(),
@@ -218,6 +279,7 @@ exports.updateProduct = async (req, res) => {
           clothingBool,
           category ? category.trim() : (clothingBool ? 'Apparel' : 'Fragrances'),
           normalizedSizes,
+          JSON.stringify(normalizedAttributes),
           Boolean(featured),
           Number(stock || 15),
           imageUrl,
@@ -236,11 +298,12 @@ exports.updateProduct = async (req, res) => {
       ...memoryStore.products[idx],
       title: title.trim(),
       subtitle: subtitle ? subtitle.trim() : null,
-      price: Number(price),
-      discount_price: discountPrice ? Number(discountPrice) : null,
+      price: Math.round(Number(price)),
+      discount_price: discountPrice ? Math.round(Number(discountPrice)) : null,
       is_clothing: clothingBool,
-      category: category || (clothingBool ? 'Clothing' : 'Accessories'),
+      category: category ? category.trim() : (clothingBool ? 'Apparel' : 'Fragrances'),
       sizes: normalizedSizes,
+      attributes: normalizedAttributes,
       featured: Boolean(featured),
       stock: Number(stock || 15),
       image_url: imageUrl,

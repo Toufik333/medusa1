@@ -2,12 +2,19 @@
 const DEMO_PRODUCTS = [
   {
     title: 'Oud Royale Extrait de Parfum',
-    subtitle: 'Pure Cambodian Oud • Damask Rose • Smoked Amber • 100ml',
+    subtitle: 'Pure Cambodian Oud • Damask Rose • Smoked Amber',
     price: 5800,
     discount_price: 4950,
     is_clothing: false,
     category: 'Fragrances',
-    sizes: [], // Non-clothing: strictly empty
+    sizes: ['50ml', '100ml'],
+    attributes: {
+      name: 'Volume',
+      options: [
+        { name: '50ml', price: 4950 },
+        { name: '100ml', price: 7800 }
+      ]
+    },
     featured: true,
     stock: 24,
     image_url: 'https://images.unsplash.com/photo-1592945403244-b3fbafd7f539?auto=format&fit=crop&w=900&q=85',
@@ -15,12 +22,19 @@ const DEMO_PRODUCTS = [
   },
   {
     title: 'Velvet Santal Eau de Parfum',
-    subtitle: 'Australian Sandalwood • Cardamom • Tuscan Leather • 100ml',
+    subtitle: 'Australian Sandalwood • Cardamom • Tuscan Leather',
     price: 4200,
     discount_price: 3650,
     is_clothing: false,
     category: 'Fragrances',
-    sizes: [],
+    sizes: ['50ml', '100ml'],
+    attributes: {
+      name: 'Volume',
+      options: [
+        { name: '50ml', price: 3650 },
+        { name: '100ml', price: 5400 }
+      ]
+    },
     featured: true,
     stock: 18,
     image_url: 'https://images.unsplash.com/photo-1547887537-6158d64c35b3?auto=format&fit=crop&w=900&q=85',
@@ -34,6 +48,15 @@ const DEMO_PRODUCTS = [
     is_clothing: true,
     category: 'Apparel',
     sizes: ['S', 'M', 'L', 'XL'],
+    attributes: {
+      name: 'Size',
+      options: [
+        { name: 'S', price: null },
+        { name: 'M', price: null },
+        { name: 'L', price: null },
+        { name: 'XL', price: null }
+      ]
+    },
     featured: true,
     stock: 25,
     image_url: 'https://images.unsplash.com/photo-1556821840-3a63f95609a7?auto=format&fit=crop&w=900&q=85',
@@ -41,12 +64,20 @@ const DEMO_PRODUCTS = [
   },
   {
     title: 'Imperial Amber Noir',
-    subtitle: 'Bourbon Vanilla • Black Amber • Tonka Bean • 50ml',
+    subtitle: 'Bourbon Vanilla • Black Amber • Tonka Bean',
     price: 3850,
     discount_price: null,
     is_clothing: false,
     category: 'Fragrances',
-    sizes: [],
+    sizes: ['30ml', '50ml', '100ml'],
+    attributes: {
+      name: 'Volume',
+      options: [
+        { name: '30ml', price: 2800 },
+        { name: '50ml', price: 3850 },
+        { name: '100ml', price: 5900 }
+      ]
+    },
     featured: false,
     stock: 35,
     image_url: 'https://images.unsplash.com/photo-1523293182086-7651a899d37f?auto=format&fit=crop&w=900&q=85',
@@ -59,7 +90,14 @@ const DEMO_PRODUCTS = [
     discount_price: 2450,
     is_clothing: false,
     category: 'Gift Sets',
-    sizes: [],
+    sizes: ['Standard 5x10ml'],
+    attributes: {
+      name: 'Set Type',
+      options: [
+        { name: 'Standard 5x10ml', price: 2450 },
+        { name: 'Deluxe Edition with Leather Case', price: 3450 }
+      ]
+    },
     featured: false,
     stock: 40,
     image_url: 'https://images.unsplash.com/photo-1616949755610-8c9bbc08f138?auto=format&fit=crop&w=900&q=85',
@@ -73,6 +111,15 @@ const DEMO_PRODUCTS = [
     is_clothing: true,
     category: 'Apparel',
     sizes: ['S', 'M', 'L', 'XL'],
+    attributes: {
+      name: 'Size',
+      options: [
+        { name: 'S', price: null },
+        { name: 'M', price: null },
+        { name: 'L', price: null },
+        { name: 'XL', price: null }
+      ]
+    },
     featured: false,
     stock: 30,
     image_url: 'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?auto=format&fit=crop&w=900&q=85',
@@ -102,13 +149,13 @@ const DEMO_ORDERS = [
     address: 'House 42, Road 11, Banani',
     area: 'Dhaka Metro',
     items: [
-      { id: 1, title: 'Oud Royale Extrait de Parfum', isClothing: false, size: null, qty: 1, price: 4950 },
-      { id: 3, title: 'Signature PerfumeGo Embroidered Hoodie', isClothing: true, size: 'L', qty: 1, price: 2850 }
+      { id: 1, title: 'Oud Royale Extrait de Parfum (100ml)', isClothing: false, size: '100ml', qty: 1, price: 7800 },
+      { id: 3, title: 'Signature PerfumeGo Embroidered Hoodie (L)', isClothing: true, size: 'L', qty: 1, price: 2850 }
     ],
     coupon_code: 'ROYAL15',
-    discount_amount: 1170,
+    discount_amount: 1597,
     delivery_fee: 60,
-    total: 6690,
+    total: 9113,
     payment_method: 'COD',
     payment_status: 'UNPAID_COD',
     status: 'Confirmed'

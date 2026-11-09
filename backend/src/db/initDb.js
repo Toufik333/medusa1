@@ -25,6 +25,7 @@ async function initPostgres() {
         is_clothing BOOLEAN DEFAULT true,
         category VARCHAR(80) NOT NULL DEFAULT 'Clothing',
         sizes TEXT[] DEFAULT '{}',
+        attributes JSONB,
         featured BOOLEAN DEFAULT false,
         stock INTEGER DEFAULT 20,
         image_url TEXT NOT NULL,
@@ -32,6 +33,8 @@ async function initPostgres() {
         created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
       );
+
+      ALTER TABLE products ADD COLUMN IF NOT EXISTS attributes JSONB;
 
       CREATE TABLE IF NOT EXISTS coupons (
         id SERIAL PRIMARY KEY,

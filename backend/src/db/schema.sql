@@ -9,6 +9,7 @@ CREATE TABLE IF NOT EXISTS products (
   is_clothing BOOLEAN DEFAULT true,
   category VARCHAR(80) NOT NULL DEFAULT 'Clothing',
   sizes TEXT[] DEFAULT '{}',
+  attributes JSONB,
   featured BOOLEAN DEFAULT false,
   stock INTEGER DEFAULT 20,
   image_url TEXT NOT NULL,

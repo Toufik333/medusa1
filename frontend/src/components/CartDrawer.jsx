@@ -178,13 +178,13 @@ export default function CartDrawer({
                         <h4 className="font-semibold text-xs text-neutral-900 truncate">
                           {item.title}
                         </h4>
-                        {item.isClothing && item.size ? (
+                        {item.size ? (
                           <span className="inline-block mt-1 px-2 py-0.5 rounded bg-neutral-900 text-white font-mono text-[10px] font-semibold">
-                            Size: {item.size}
+                            {item.attributeName || (item.isClothing ? 'Size' : 'Option')}: {item.size}
                           </span>
                         ) : (
                           <span className="inline-block mt-1 text-[11px] text-neutral-400">
-                            Universal Spec
+                            Standard
                           </span>
                         )}
                       </div>

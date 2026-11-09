@@ -10,7 +10,10 @@ import {
   Star,
   Edit3,
   Trash2,
-  X
+  X,
+  Plus,
+  Sliders,
+  Sparkles
 } from 'lucide-react';
 import ProductImageFrame from '../ProductImageFrame';
 import { formatPrice } from '../ProductCard';
@@ -44,6 +47,14 @@ export default function ProductManager({
   const [formFeatured, setFormFeatured] = useState(false);
   const [formStock, setFormStock] = useState('25');
 
+  // Custom Attributes & Options State
+  const [attributeEnabled, setAttributeEnabled] = useState(true);
+  const [attributeName, setAttributeName] = useState('Volume');
+  const [attributeOptions, setAttributeOptions] = useState([
+    { id: 1, name: '50ml', price: '' },
+    { id: 2, name: '100ml', price: '' }
+  ]);
+
   // 4:5 Image Cropper State
   const [rawImageUrl, setRawImageUrl] = useState(SAMPLE_STOCK_PHOTOS[0].url);
   const [cropZoom, setCropZoom] = useState(1);
@@ -64,6 +75,12 @@ export default function ProductManager({
     setFormSizes([]);
     setFormFeatured(false);
     setFormStock('25');
+    setAttributeEnabled(true);
+    setAttributeName('Volume');
+    setAttributeOptions([
+      { id: 1, name: '50ml', price: '' },
+      { id: 2, name: '100ml', price: '' }
+    ]);
     setRawImageUrl(SAMPLE_STOCK_PHOTOS[0].url);
     setCropZoom(1);
     setCropPanX(0);
@@ -81,11 +98,99 @@ export default function ProductManager({
     setFormSizes(product.isClothing && product.sizes?.length ? product.sizes : (product.isClothing ? ['S', 'M', 'L', 'XL'] : []));
     setFormFeatured(Boolean(product.featured));
     setFormStock(String(product.stock || 20));
+
+    // Populate custom attributes
+    if (product.attributes && Array.isArray(product.attributes.options) && product.attributes.options.length > 0) {
+      setAttributeEnabled(true);
+      setAttributeName(product.attributes.name || 'Volume');
+      setAttributeOptions(
+        product.attributes.options.map((opt, idx) => ({
+          id: idx + 1,
+          name: typeof opt === 'object' ? opt.name : String(opt),
+          price: typeof opt === 'object' && opt.price ? String(opt.price) : ''
+        }))
+      );
+    } else if (product.isClothing && Array.isArray(product.sizes) && product.sizes.length > 0) {
+      setAttributeEnabled(true);
+      setAttributeName('Size');
+      setAttributeOptions(
+        product.sizes.map((s, idx) => ({
+          id: idx + 1,
+          name: s,
+          price: ''
+        }))
+      );
+    } else {
+      setAttributeEnabled(false);
+      setAttributeName('Volume');
+      setAttributeOptions([]);
+    }
+
     setRawImageUrl(product.imageUrl);
     setCropZoom(product.cropMeta?.zoom || 1);
     setCropPanX(product.cropMeta?.panX || 0);
     setCropPanY(product.cropMeta?.panY || 0);
     window.scrollTo({ top: 120, behavior: 'smooth' });
+  };
+
+  // Quick Preset Handlers
+  const applyPerfumePreset = () => {
+    setAttributeEnabled(true);
+    setAttributeName('Volume');
+    setAttributeOptions([
+      { id: 1, name: '50ml', price: '' },
+      { id: 2, name: '100ml', price: '' }
+    ]);
+    setFormIsClothing(false);
+    setFormCategory('Fragrances');
+  };
+
+  const applyClothingPreset = () => {
+    setAttributeEnabled(true);
+    setAttributeName('Size');
+    setAttributeOptions([
+      { id: 1, name: 'S', price: '' },
+      { id: 2, name: 'M', price: '' },
+      { id: 3, name: 'L', price: '' },
+      { id: 4, name: 'XL', price: '' }
+    ]);
+    setFormIsClothing(true);
+    setFormCategory('Apparel');
+  };
+
+  const applySamplesPreset = () => {
+    setAttributeEnabled(true);
+    setAttributeName('Bottle Size');
+    setAttributeOptions([
+      { id: 1, name: '2ml Sample', price: '' },
+      { id: 2, name: '5ml Travel Spray', price: '' },
+      { id: 3, name: '10ml Decant', price: '' }
+    ]);
+    setFormIsClothing(false);
+    setFormCategory('Fragrances');
+  };
+
+  const applyNoAttributesPreset = () => {
+    setAttributeEnabled(false);
+    setAttributeOptions([]);
+    setFormIsClothing(false);
+  };
+
+  const handleAddAttributeOption = () => {
+    setAttributeOptions((prev) => [
+      ...prev,
+      { id: Date.now(), name: '', price: '' }
+    ]);
+  };
+
+  const handleUpdateOption = (id, field, val) => {
+    setAttributeOptions((prev) =>
+      prev.map((opt) => (opt.id === id ? { ...opt, [field]: val } : opt))
+    );
+  };
+
+  const handleRemoveOption = (id) => {
+    setAttributeOptions((prev) => prev.filter((opt) => opt.id !== id));
   };
 
   const handleToggleClothing = (isClothing) => {
@@ -207,21 +312,41 @@ export default function ProductManager({
       showToast('Product title and price are required.', 'error');
       return;
     }
-    if (formIsClothing && formSizes.length === 0) {
-      showToast('Please select at least one clothing size (S, M, L, XL).', 'error');
+
+    const validOptions = attributeEnabled
+      ? attributeOptions
+          .filter((opt) => opt.name && opt.name.trim().length > 0)
+          .map((opt) => ({
+            name: opt.name.trim(),
+            price: opt.price && !isNaN(Number(opt.price)) && Number(opt.price) > 0 ? Number(opt.price) : null
+          }))
+      : [];
+
+    const isApparel = formIsClothing || attributeName.toLowerCase().includes('size') || formCategory === 'Apparel' || formCategory === 'Clothing';
+
+    if (isApparel && attributeEnabled && validOptions.length === 0) {
+      showToast('Please specify at least one size/option for clothing.', 'error');
       return;
     }
 
     const { imageUrl: finalImg, cropMeta: finalCrop } = await exportCropped4x5Image();
 
+    const attributesPayload = attributeEnabled && validOptions.length > 0
+      ? {
+          name: attributeName.trim() || 'Option',
+          options: validOptions
+        }
+      : null;
+
     const payload = {
       title: formTitle.trim(),
-      subtitle: formSubtitle.trim() || (formIsClothing ? 'Tailored Studio Apparel' : 'Everyday Studio Utility'),
+      subtitle: formSubtitle.trim() || (isApparel ? 'Tailored Studio Apparel' : 'Everyday Studio Utility'),
       price: Number(formPrice),
       discountPrice: formDiscountPrice ? Number(formDiscountPrice) : null,
-      isClothing: formIsClothing,
+      isClothing: isApparel,
       category: formCategory,
-      sizes: formIsClothing ? formSizes : [],
+      sizes: isApparel && validOptions.length > 0 ? validOptions.map((o) => o.name) : (formSizes.length > 0 ? formSizes : []),
+      attributes: attributesPayload,
       featured: formFeatured,
       stock: Number(formStock) || 15,
       imageUrl: finalImg,
@@ -242,7 +367,7 @@ export default function ProductManager({
               {editingProductId ? 'Edit Product Post' : 'Create Customizable Product Post'}
             </h2>
             <p className="text-xs text-neutral-500">
-              Toggle Clothing ON to enable S/M/L/XL size options, or OFF to hide sizes completely.
+              Configure product details, custom variations (Volume / ML / Size) with optional custom pricing, and 4:5 image.
             </p>
           </div>
           {editingProductId && (
@@ -257,89 +382,139 @@ export default function ProductManager({
         </div>
 
         <form onSubmit={handleFormSubmit} className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-          {/* Left Column: Metadata & Conditional Clothing Logic */}
+          {/* Left Column: Metadata & Custom Attributes Logic */}
           <div className="lg:col-span-5 space-y-5">
-            {/* Classification Toggle */}
-            <div className="p-4 rounded-xl bg-neutral-50 border border-neutral-200/80 space-y-2.5">
-              <label className="text-xs font-bold uppercase tracking-wider text-neutral-700 block">
-                1. Product Classification (Controls Size Options)
-              </label>
-              <div className="grid grid-cols-2 gap-2">
+            {/* Custom Attributes & Variations Manager */}
+            <div className="p-4 rounded-xl bg-neutral-50 border border-neutral-200/90 space-y-3.5">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-bold uppercase tracking-wider text-neutral-800 flex items-center gap-1.5">
+                  <Sliders className="w-3.5 h-3.5 text-amber-600" />
+                  <span>1. Attributes & Variations (ML / Size)</span>
+                </label>
                 <button
                   type="button"
-                  onClick={() => handleToggleClothing(true)}
-                  className={`py-2.5 px-3 rounded-xl text-xs font-semibold border text-left transition-all cursor-pointer ${
-                    formIsClothing
-                      ? 'bg-neutral-950 text-white border-neutral-950 shadow-sm'
-                      : 'bg-white text-neutral-700 border-neutral-200 hover:border-neutral-300'
+                  onClick={() => setAttributeEnabled(!attributeEnabled)}
+                  className={`text-[11px] font-semibold px-2 py-0.5 rounded cursor-pointer transition ${
+                    attributeEnabled
+                      ? 'bg-amber-100 text-amber-800 hover:bg-amber-200'
+                      : 'bg-neutral-200 text-neutral-700 hover:bg-neutral-300'
                   }`}
                 >
-                  <div className="font-bold">Clothing / Apparel</div>
-                  <div className="text-[10px] opacity-80 mt-0.5">
-                    Enables S, M, L, XL selector
-                  </div>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleToggleClothing(false)}
-                  className={`py-2.5 px-3 rounded-xl text-xs font-semibold border text-left transition-all cursor-pointer ${
-                    !formIsClothing
-                      ? 'bg-neutral-950 text-white border-neutral-950 shadow-sm'
-                      : 'bg-white text-neutral-700 border-neutral-200 hover:border-neutral-300'
-                  }`}
-                >
-                  <div className="font-bold">Non-Clothing Object</div>
-                  <div className="text-[10px] opacity-80 mt-0.5">
-                    Hides size options completely
-                  </div>
+                  {attributeEnabled ? 'Enabled' : 'Disabled (Single Size)'}
                 </button>
               </div>
-            </div>
 
-            {/* Conditional Sizing Area */}
-            {formIsClothing ? (
-              <div className="p-4 rounded-xl bg-amber-50/60 border border-amber-200/80 space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-neutral-900">
-                    Available Clothing Sizes
-                  </span>
-                  <span className="text-[11px] text-amber-800 font-medium">
-                    Visible on Storefront
-                  </span>
-                </div>
-                <div className="grid grid-cols-4 gap-2 pt-1">
-                  {ALL_SIZES.map((sz) => {
-                    const checked = formSizes.includes(sz);
-                    return (
-                      <button
-                        key={sz}
-                        type="button"
-                        onClick={() => {
-                          setFormSizes((prev) =>
-                            prev.includes(sz) ? prev.filter((s) => s !== sz) : [...prev, sz]
-                          );
-                        }}
-                        className={`py-2 rounded-lg text-xs font-bold border flex items-center justify-center gap-1.5 transition cursor-pointer ${
-                          checked
-                            ? 'bg-neutral-950 text-white border-neutral-950'
-                            : 'bg-white text-neutral-500 border-neutral-200 hover:border-neutral-400'
-                        }`}
-                      >
-                        {checked && <Check className="w-3 h-3" />}
-                        {sz}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            ) : (
-              <div className="p-3.5 rounded-xl bg-neutral-100 border border-neutral-200 text-xs text-neutral-600 flex items-center gap-2.5">
-                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                <span>
-                  <strong>Non-Clothing selected:</strong> Size options are hidden in both this form and the customer storefront card.
+              {/* Quick Presets */}
+              <div className="space-y-1.5">
+                <span className="text-[10px] text-neutral-500 uppercase tracking-wider font-semibold">
+                  Quick Presets:
                 </span>
+                <div className="flex flex-wrap gap-1.5">
+                  <button
+                    type="button"
+                    onClick={applyPerfumePreset}
+                    className="text-[11px] px-2.5 py-1 rounded-lg bg-white border border-neutral-300 text-neutral-700 hover:border-neutral-900 font-medium transition cursor-pointer"
+                  >
+                    💧 Perfume Volume (50ml / 100ml)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={applyClothingPreset}
+                    className="text-[11px] px-2.5 py-1 rounded-lg bg-white border border-neutral-300 text-neutral-700 hover:border-neutral-900 font-medium transition cursor-pointer"
+                  >
+                    👕 Clothing (S, M, L, XL)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={applySamplesPreset}
+                    className="text-[11px] px-2.5 py-1 rounded-lg bg-white border border-neutral-300 text-neutral-700 hover:border-neutral-900 font-medium transition cursor-pointer"
+                  >
+                    🧪 Samples (2ml, 5ml, 10ml)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={applyNoAttributesPreset}
+                    className="text-[11px] px-2 py-1 rounded-lg bg-white border border-neutral-200 text-neutral-500 hover:text-neutral-800 cursor-pointer"
+                  >
+                    🚫 Single Spec
+                  </button>
+                </div>
               </div>
-            )}
+
+              {/* Attributes Editor Form */}
+              {attributeEnabled ? (
+                <div className="space-y-3 pt-2 border-t border-neutral-200">
+                  <div>
+                    <label className="text-[11px] font-semibold text-neutral-700 block mb-1">
+                      Attribute Label (e.g., Volume, Size, Edition)
+                    </label>
+                    <input
+                      type="text"
+                      value={attributeName}
+                      onChange={(e) => setAttributeName(e.target.value)}
+                      placeholder="e.g., Volume (ml) or Size"
+                      className="w-full px-3 py-1.5 rounded-lg bg-white border border-neutral-300 text-xs focus:outline-none focus:border-neutral-950"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between text-[11px] font-semibold text-neutral-700">
+                      <span>Options & Custom Pricing (৳)</span>
+                      <span className="text-[10px] text-neutral-400 font-normal">
+                        Leave price blank to use base price
+                      </span>
+                    </div>
+
+                    <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+                      {attributeOptions.map((opt) => (
+                        <div key={opt.id} className="flex items-center gap-2">
+                          <input
+                            type="text"
+                            value={opt.name}
+                            onChange={(e) => handleUpdateOption(opt.id, 'name', e.target.value)}
+                            placeholder="Option name (e.g. 50ml, 100ml, XL)"
+                            className="flex-1 px-2.5 py-1.5 rounded-lg bg-white border border-neutral-300 text-xs focus:outline-none focus:border-neutral-950"
+                          />
+                          <div className="relative w-32">
+                            <span className="absolute left-2.5 top-1.5 text-xs text-neutral-400">৳</span>
+                            <input
+                              type="number"
+                              min="0"
+                              value={opt.price}
+                              onChange={(e) => handleUpdateOption(opt.id, 'price', e.target.value)}
+                              placeholder={formDiscountPrice || formPrice || 'Base'}
+                              className="w-full pl-6 pr-2 py-1.5 rounded-lg bg-white border border-neutral-300 text-xs focus:outline-none focus:border-neutral-950"
+                            />
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveOption(opt.id)}
+                            className="p-1.5 rounded-lg text-neutral-400 hover:text-red-600 hover:bg-red-50 transition cursor-pointer"
+                            title="Remove option"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={handleAddAttributeOption}
+                      className="w-full py-1.5 rounded-lg bg-white border border-dashed border-neutral-300 text-xs font-semibold text-neutral-700 hover:border-neutral-900 hover:text-neutral-950 flex items-center justify-center gap-1 transition cursor-pointer"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      <span>Add Another Option</span>
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="p-3 rounded-lg bg-white border border-neutral-200 text-xs text-neutral-600 flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span>Single spec product. No size/volume pills will be shown.</span>
+                </div>
+              )}
+            </div>
 
             {/* Title & Subtitle */}
             <div className="space-y-3">
@@ -667,20 +842,24 @@ export default function ProductManager({
                     <div className="text-sm font-bold text-neutral-950">
                       {formatPrice(formDiscountPrice || formPrice || 3200)}
                     </div>
-                    {formIsClothing ? (
-                      <div className="grid grid-cols-4 gap-1 pt-1">
-                        {(formSizes.length ? formSizes : ['S', 'M', 'L', 'XL']).map((s) => (
-                          <span
-                            key={s}
-                            className="text-[10px] py-1 text-center rounded bg-neutral-100 font-semibold text-neutral-700"
-                          >
-                            {s}
-                          </span>
-                        ))}
+                    {attributeEnabled && attributeOptions.length > 0 ? (
+                      <div className="space-y-1 pt-1">
+                        <span className="text-[10px] text-neutral-500 font-medium">{attributeName || 'Option'}:</span>
+                        <div className="flex flex-wrap gap-1">
+                          {attributeOptions.map((opt) => (
+                            <span
+                              key={opt.id}
+                              className="text-[10px] py-0.5 px-2 rounded bg-neutral-100 border border-neutral-200 font-medium text-neutral-800"
+                            >
+                              {opt.name || '...'}
+                              {opt.price ? ` (${formatPrice(opt.price)})` : ''}
+                            </span>
+                          ))}
+                        </div>
                       </div>
                     ) : (
                       <div className="text-[10px] py-1 px-2 rounded bg-neutral-50 text-neutral-400 border border-neutral-100">
-                        Size selector hidden (Non-Clothing)
+                        Single spec (No attributes)
                       </div>
                     )}
                   </div>
@@ -731,12 +910,29 @@ export default function ProductManager({
                     </div>
                   </td>
                   <td className="py-3 px-4">
-                    {p.isClothing ? (
+                    {p.attributes?.options?.length > 0 ? (
+                      <div className="space-y-1">
+                        <span className="inline-block px-1.5 py-0.5 rounded bg-amber-100 text-amber-900 text-[10px] font-bold">
+                          {p.attributes.name || 'Attributes'}
+                        </span>
+                        <div className="flex flex-wrap items-center gap-1">
+                          {p.attributes.options.map((opt, i) => (
+                            <span
+                              key={i}
+                              className="px-1.5 py-0.5 rounded bg-neutral-100 border border-neutral-200 font-medium text-[10px]"
+                            >
+                              {typeof opt === 'object' ? opt.name : opt}
+                              {typeof opt === 'object' && opt.price ? ` (${formatPrice(opt.price)})` : ''}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    ) : p.isClothing && p.sizes?.length ? (
                       <div className="flex flex-wrap items-center gap-1">
                         <span className="px-2 py-0.5 rounded bg-neutral-900 text-white text-[10px] font-medium mr-1">
                           Clothing
                         </span>
-                        {p.sizes?.map((s) => (
+                        {p.sizes.map((s) => (
                           <span
                             key={s}
                             className="px-1.5 py-0.5 rounded bg-neutral-100 border border-neutral-200 font-mono text-[10px]"
@@ -747,7 +943,7 @@ export default function ProductManager({
                       </div>
                     ) : (
                       <span className="px-2 py-0.5 rounded bg-neutral-100 text-neutral-600 text-[11px]">
-                        Non-Clothing (Sizes Hidden)
+                        Single Spec
                       </span>
                     )}
                   </td>
