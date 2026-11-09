@@ -15,14 +15,9 @@ function getAdminsFromEnv() {
         name: 'PerfumeGo Master Admin'
       },
       {
-        email: 'admin@mono.studio',
-        passwordRaw: 'admin12345!',
-        name: 'Master Admin'
-      },
-      {
-        email: 'toufik@perfumego.com',
-        passwordRaw: 'toufikSecure2026!',
-        name: 'Toufik'
+        email: 'manager@perfumego.com',
+        passwordRaw: 'managerDemo2026!',
+        name: 'Demo Store Manager'
       }
     ];
   }
