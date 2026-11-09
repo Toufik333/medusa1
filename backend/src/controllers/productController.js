@@ -15,7 +15,7 @@ function formatProduct(row) {
   if (!attributes && Array.isArray(row.sizes) && row.sizes.length > 0) {
     attributes = {
       name: row.is_clothing ? 'Size' : 'Volume',
-      options: row.sizes.map((s) => ({ name: s, price: null }))
+      options: row.sizes.map((s) => ({ name: s, price: null, stock: null }))
     };
   }
 
@@ -131,6 +131,9 @@ exports.createProduct = async (req, res) => {
     }
 
     const clothingBool = Boolean(isClothing);
+    const parsedStock = (stock !== undefined && stock !== null && String(stock).trim() !== '' && !isNaN(stock))
+      ? Math.max(0, parseInt(stock, 10))
+      : 15;
     
     // Normalize custom attributes & variations
     let normalizedAttributes = null;
@@ -141,18 +144,24 @@ exports.createProduct = async (req, res) => {
             .filter((o) => o && o.name && String(o.name).trim().length > 0)
             .map((o) => ({
               name: String(o.name).trim(),
-              price: o.price && !isNaN(o.price) && Number(o.price) > 0 ? Math.round(Number(o.price)) : null
+              price: o.price !== undefined && o.price !== null && String(o.price).trim() !== '' && !isNaN(o.price) && Number(o.price) > 0 ? Math.round(Number(o.price)) : null,
+              stock: o.stock !== undefined && o.stock !== null && String(o.stock).trim() !== '' && !isNaN(o.stock) ? Math.max(0, parseInt(o.stock, 10)) : null
             }))
         : [];
       normalizedAttributes = { name, options };
     } else if (Array.isArray(sizes) && sizes.length > 0) {
       normalizedAttributes = {
         name: clothingBool ? 'Size' : 'Volume',
-        options: sizes.map((s) => ({ name: String(s).trim(), price: null }))
+        options: sizes.map((s) => ({ name: String(s).trim(), price: null, stock: null }))
       };
     } else {
       normalizedAttributes = { name: clothingBool ? 'Size' : 'Volume', options: [] };
     }
+
+    const hasOptionStock = normalizedAttributes.options.some((o) => o.stock !== null);
+    const finalStock = hasOptionStock
+      ? normalizedAttributes.options.reduce((sum, o) => sum + (o.stock || 0), 0)
+      : parsedStock;
 
     const normalizedSizes = normalizedAttributes.options.map((o) => o.name);
     const normalizedCrop = cropMeta || { zoom: 1, panX: 0, panY: 0 };
@@ -173,7 +182,7 @@ exports.createProduct = async (req, res) => {
           normalizedSizes,
           JSON.stringify(normalizedAttributes),
           Boolean(featured),
-          Number(stock || 15),
+          finalStock,
           imageUrl,
           JSON.stringify(normalizedCrop)
         ]
@@ -194,7 +203,7 @@ exports.createProduct = async (req, res) => {
       sizes: normalizedSizes,
       attributes: normalizedAttributes,
       featured: Boolean(featured),
-      stock: Number(stock || 15),
+      stock: finalStock,
       image_url: imageUrl,
       crop_meta: normalizedCrop,
       created_at: new Date().toISOString()
@@ -227,6 +236,9 @@ exports.updateProduct = async (req, res) => {
     } = req.body;
 
     const clothingBool = Boolean(isClothing);
+    const parsedStock = (stock !== undefined && stock !== null && String(stock).trim() !== '' && !isNaN(stock))
+      ? Math.max(0, parseInt(stock, 10))
+      : 0;
     
     // Normalize custom attributes & variations
     let normalizedAttributes = null;
@@ -237,18 +249,24 @@ exports.updateProduct = async (req, res) => {
             .filter((o) => o && o.name && String(o.name).trim().length > 0)
             .map((o) => ({
               name: String(o.name).trim(),
-              price: o.price && !isNaN(o.price) && Number(o.price) > 0 ? Math.round(Number(o.price)) : null
+              price: o.price !== undefined && o.price !== null && String(o.price).trim() !== '' && !isNaN(o.price) && Number(o.price) > 0 ? Math.round(Number(o.price)) : null,
+              stock: o.stock !== undefined && o.stock !== null && String(o.stock).trim() !== '' && !isNaN(o.stock) ? Math.max(0, parseInt(o.stock, 10)) : null
             }))
         : [];
       normalizedAttributes = { name, options };
     } else if (Array.isArray(sizes) && sizes.length > 0) {
       normalizedAttributes = {
         name: clothingBool ? 'Size' : 'Volume',
-        options: sizes.map((s) => ({ name: String(s).trim(), price: null }))
+        options: sizes.map((s) => ({ name: String(s).trim(), price: null, stock: null }))
       };
     } else {
       normalizedAttributes = { name: clothingBool ? 'Size' : 'Volume', options: [] };
     }
+
+    const hasOptionStock = normalizedAttributes.options.some((o) => o.stock !== null);
+    const finalStock = hasOptionStock
+      ? normalizedAttributes.options.reduce((sum, o) => sum + (o.stock || 0), 0)
+      : parsedStock;
 
     const normalizedSizes = normalizedAttributes.options.map((o) => o.name);
     const normalizedCrop = cropMeta || { zoom: 1, panX: 0, panY: 0 };
@@ -281,7 +299,7 @@ exports.updateProduct = async (req, res) => {
           normalizedSizes,
           JSON.stringify(normalizedAttributes),
           Boolean(featured),
-          Number(stock || 15),
+          finalStock,
           imageUrl,
           JSON.stringify(normalizedCrop),
           id
@@ -305,7 +323,7 @@ exports.updateProduct = async (req, res) => {
       sizes: normalizedSizes,
       attributes: normalizedAttributes,
       featured: Boolean(featured),
-      stock: Number(stock || 15),
+      stock: finalStock,
       image_url: imageUrl,
       crop_meta: normalizedCrop
     };

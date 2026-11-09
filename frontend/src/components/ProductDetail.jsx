@@ -36,12 +36,18 @@ export default function ProductDetail({
   );
   const [qty, setQty] = useState(1);
 
-  // Compute active price based on selected option
+  // Compute active price & stock based on selected option
   const activeOption = rawOptions.find((o) => o.name === selectedOptionName);
   const basePrice = product.discountPrice || product.price;
   const currentPrice = activeOption?.price && activeOption.price > 0
     ? activeOption.price
     : basePrice;
+
+  const isOptionStockTracked = activeOption && activeOption.stock !== null && activeOption.stock !== undefined;
+  const currentStock = isOptionStockTracked
+    ? Number(activeOption.stock)
+    : Number(product.stock !== undefined && product.stock !== null ? product.stock : 0);
+  const isOutOfStock = currentStock <= 0;
 
   const hasDiscount = !activeOption?.price && product.discountPrice && product.discountPrice < product.price;
   const discountPct = hasDiscount
@@ -49,6 +55,11 @@ export default function ProductDetail({
     : null;
 
   const handleAdd = (openDrawer = false) => {
+    if (isOutOfStock) {
+      showToast(`Sorry, ${product.title}${selectedOptionName ? ` (${selectedOptionName})` : ''} is out of stock.`, 'error');
+      return;
+    }
+
     if (rawOptions.length > 0 && !selectedOptionName) {
       showToast(`Please select a ${attributeName.toLowerCase()} before adding to bag.`, 'error');
       return;
@@ -101,7 +112,7 @@ export default function ProductDetail({
               alt={product.title}
               cropMeta={product.cropMeta}
               featured={product.featured}
-              badge={hasDiscount ? `-${discountPct}% OFF` : null}
+              badge={isOutOfStock ? 'OUT OF STOCK' : (hasDiscount ? `-${discountPct}% OFF` : null)}
             />
           </div>
         </div>
@@ -113,10 +124,22 @@ export default function ProductDetail({
             <span className="text-xs font-bold uppercase tracking-widest text-amber-800 bg-amber-50 px-3 py-1 rounded-full border border-amber-200/60">
               {product.category}
             </span>
-            <span className="inline-flex items-center gap-1.5 text-xs text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full font-medium">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-              <span>In Stock ({product.stock} available)</span>
-            </span>
+            {isOutOfStock ? (
+              <span className="inline-flex items-center gap-1.5 text-xs text-rose-700 bg-rose-50 px-3 py-1 rounded-full font-bold border border-rose-200">
+                <span className="w-1.5 h-1.5 rounded-full bg-rose-600" />
+                <span>Out of Stock</span>
+              </span>
+            ) : currentStock <= 5 ? (
+              <span className="inline-flex items-center gap-1.5 text-xs text-amber-800 bg-amber-50 px-3 py-1 rounded-full font-semibold border border-amber-200">
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-600" />
+                <span>Low Stock — Only {currentStock} left!</span>
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1.5 text-xs text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full font-medium">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                <span>In Stock ({currentStock} available)</span>
+              </span>
+            )}
           </div>
 
           {/* Title & Subtitle */}
@@ -159,6 +182,11 @@ export default function ProductDetail({
                 {selectedOptionName && (
                   <span className="text-neutral-500">
                     Selected: <strong className="text-neutral-900">{selectedOptionName}</strong>
+                    {isOptionStockTracked && (
+                      <span className={`ml-1.5 text-xs font-semibold ${isOutOfStock ? 'text-rose-600' : 'text-neutral-500'}`}>
+                        ({isOutOfStock ? 'Out of Stock' : `${currentStock} in stock`})
+                      </span>
+                    )}
                   </span>
                 )}
               </div>
@@ -167,6 +195,8 @@ export default function ProductDetail({
                 {rawOptions.map((opt) => {
                   const isSelected = selectedOptionName === opt.name;
                   const optionPrice = opt.price && opt.price > 0 ? opt.price : null;
+                  const optStockTracked = opt.stock !== null && opt.stock !== undefined;
+                  const optOutOfStock = optStockTracked && Number(opt.stock) <= 0;
 
                   return (
                     <button
@@ -176,13 +206,20 @@ export default function ProductDetail({
                       className={`py-2.5 px-4 rounded-xl text-xs font-semibold transition-all flex items-center gap-2 cursor-pointer border ${
                         isSelected
                           ? 'bg-neutral-950 text-white border-neutral-950 shadow-sm scale-[1.02]'
+                          : optOutOfStock
+                          ? 'bg-neutral-100 text-neutral-400 border-neutral-200 hover:border-neutral-300'
                           : 'bg-white text-neutral-800 border-neutral-300 hover:border-neutral-400 hover:bg-neutral-50'
                       }`}
                     >
-                      <span>{opt.name}</span>
+                      <span className={optOutOfStock && !isSelected ? 'line-through' : ''}>{opt.name}</span>
                       {optionPrice && (
                         <span className={`text-[11px] font-normal ${isSelected ? 'text-amber-300' : 'text-neutral-500'}`}>
                           • {formatPrice(optionPrice)}
+                        </span>
+                      )}
+                      {optOutOfStock && (
+                        <span className={`text-[10px] font-bold ${isSelected ? 'text-rose-300' : 'text-rose-600'}`}>
+                          (Out of Stock)
                         </span>
                       )}
                     </button>
@@ -198,45 +235,70 @@ export default function ProductDetail({
             <div className="inline-flex items-center rounded-xl border border-neutral-300 bg-white">
               <button
                 type="button"
+                disabled={isOutOfStock || qty <= 1}
                 onClick={() => setQty((prev) => Math.max(1, prev - 1))}
-                className="w-9 h-9 flex items-center justify-center text-neutral-600 hover:bg-neutral-100 rounded-l-xl cursor-pointer"
+                className="w-9 h-9 flex items-center justify-center text-neutral-600 hover:bg-neutral-100 disabled:opacity-30 disabled:cursor-not-allowed rounded-l-xl cursor-pointer"
                 aria-label="Decrease quantity"
               >
                 -
               </button>
               <span className="w-10 text-center font-bold text-xs text-neutral-900">
-                {qty}
+                {isOutOfStock ? 0 : qty}
               </span>
               <button
                 type="button"
-                onClick={() => setQty((prev) => Math.min(product.stock || 20, prev + 1))}
-                className="w-9 h-9 flex items-center justify-center text-neutral-600 hover:bg-neutral-100 rounded-r-xl cursor-pointer"
+                disabled={isOutOfStock || qty >= currentStock}
+                onClick={() => setQty((prev) => Math.min(currentStock, prev + 1))}
+                className="w-9 h-9 flex items-center justify-center text-neutral-600 hover:bg-neutral-100 disabled:opacity-30 disabled:cursor-not-allowed rounded-r-xl cursor-pointer"
                 aria-label="Increase quantity"
               >
                 +
               </button>
             </div>
+            {isOutOfStock ? (
+              <span className="text-xs text-rose-600 font-semibold">Currently Unavailable</span>
+            ) : (
+              <span className="text-xs text-neutral-500">Max {currentStock} available</span>
+            )}
           </div>
 
           {/* Action CTA Buttons */}
-          <div className="space-y-3 pt-4">
-            <button
-              type="button"
-              onClick={() => handleAdd(true)}
-              className="w-full py-3.5 px-6 rounded-2xl bg-amber-700 text-white font-bold text-sm hover:bg-amber-800 active:scale-[0.99] transition-all cursor-pointer shadow-md shadow-amber-900/10 flex items-center justify-center gap-2"
-            >
-              <Sparkles className="w-4 h-4" />
-              <span>Buy Now — Cash on Delivery ({formatPrice(currentPrice * qty)})</span>
-            </button>
+          <div className="pt-4">
+            {isOutOfStock ? (
+              <div className="space-y-2">
+                <button
+                  type="button"
+                  disabled
+                  className="w-full py-3.5 px-6 rounded-2xl bg-neutral-200 text-neutral-400 font-bold text-sm border border-neutral-300 cursor-not-allowed flex items-center justify-center gap-2 shadow-none"
+                >
+                  <ShoppingBag className="w-4 h-4" />
+                  <span>Out of Stock — Cannot Add to Bag</span>
+                </button>
+                <p className="text-xs text-center text-rose-600 font-medium">
+                  This {attributeName ? attributeName.toLowerCase() : 'variation'} ({selectedOptionName || 'Item'}) is currently sold out. Please choose another option.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <button
+                  type="button"
+                  onClick={() => handleAdd(true)}
+                  className="w-full py-3.5 px-6 rounded-2xl bg-amber-700 text-white font-bold text-sm hover:bg-amber-800 active:scale-[0.99] transition-all cursor-pointer shadow-md shadow-amber-900/10 flex items-center justify-center gap-2"
+                >
+                  <Sparkles className="w-4 h-4" />
+                  <span>Buy Now — Cash on Delivery ({formatPrice(currentPrice * qty)})</span>
+                </button>
 
-            <button
-              type="button"
-              onClick={() => handleAdd(false)}
-              className="w-full py-3.5 px-6 rounded-2xl bg-neutral-950 text-white font-semibold text-sm hover:bg-neutral-800 active:scale-[0.99] transition-all cursor-pointer shadow-sm flex items-center justify-center gap-2"
-            >
-              <ShoppingBag className="w-4 h-4" />
-              <span>Add to Shopping Bag</span>
-            </button>
+                <button
+                  type="button"
+                  onClick={() => handleAdd(false)}
+                  className="w-full py-3.5 px-6 rounded-2xl bg-neutral-950 text-white font-semibold text-sm hover:bg-neutral-800 active:scale-[0.99] transition-all cursor-pointer shadow-sm flex items-center justify-center gap-2"
+                >
+                  <ShoppingBag className="w-4 h-4" />
+                  <span>Add to Shopping Bag</span>
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Thin Guarantees Strip */}

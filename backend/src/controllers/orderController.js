@@ -112,6 +112,40 @@ exports.createOrder = async (req, res) => {
           finalTotal
         ]
       );
+
+      // Decrement stock in database for purchased items & variations
+      for (const item of items) {
+        try {
+          const prodRes = await db.query('SELECT stock, attributes FROM products WHERE id = $1', [item.id]);
+          if (prodRes.rowCount > 0) {
+            let pStock = Math.max(0, Number(prodRes.rows[0].stock || 0) - Number(item.qty || 1));
+            let pAttrs = prodRes.rows[0].attributes;
+            if (typeof pAttrs === 'string') {
+              try { pAttrs = JSON.parse(pAttrs); } catch {}
+            }
+            if (pAttrs && Array.isArray(pAttrs.options) && item.size) {
+              pAttrs.options = pAttrs.options.map((opt) => {
+                if (opt.name === item.size && opt.stock !== null && opt.stock !== undefined) {
+                  return { ...opt, stock: Math.max(0, Number(opt.stock) - Number(item.qty || 1)) };
+                }
+                return opt;
+              });
+              const hasOptionStock = pAttrs.options.some((o) => o.stock !== null && o.stock !== undefined);
+              if (hasOptionStock) {
+                pStock = pAttrs.options.reduce((sum, o) => sum + (o.stock || 0), 0);
+              }
+            }
+            await db.query('UPDATE products SET stock = $1, attributes = $2 WHERE id = $3', [
+              pStock,
+              pAttrs ? JSON.stringify(pAttrs) : null,
+              item.id
+            ]);
+          }
+        } catch (err) {
+          console.error('Error updating stock after order:', err);
+        }
+      }
+
       return res.status(201).json(formatOrder(result.rows[0]));
     }
 

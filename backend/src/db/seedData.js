@@ -11,8 +11,8 @@ const DEMO_PRODUCTS = [
     attributes: {
       name: 'Volume',
       options: [
-        { name: '50ml', price: 4950 },
-        { name: '100ml', price: 7800 }
+        { name: '50ml', price: 4950, stock: 15 },
+        { name: '100ml', price: 7800, stock: 9 }
       ]
     },
     featured: true,
@@ -31,8 +31,8 @@ const DEMO_PRODUCTS = [
     attributes: {
       name: 'Volume',
       options: [
-        { name: '50ml', price: 3650 },
-        { name: '100ml', price: 5400 }
+        { name: '50ml', price: 3650, stock: 12 },
+        { name: '100ml', price: 5400, stock: 6 }
       ]
     },
     featured: true,
@@ -51,10 +51,10 @@ const DEMO_PRODUCTS = [
     attributes: {
       name: 'Size',
       options: [
-        { name: 'S', price: null },
-        { name: 'M', price: null },
-        { name: 'L', price: null },
-        { name: 'XL', price: null }
+        { name: 'S', price: null, stock: 5 },
+        { name: 'M', price: null, stock: 10 },
+        { name: 'L', price: null, stock: 7 },
+        { name: 'XL', price: null, stock: 3 }
       ]
     },
     featured: true,

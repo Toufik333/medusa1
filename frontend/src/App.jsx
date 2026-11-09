@@ -39,7 +39,14 @@ const INITIAL_PRODUCTS = [
     discountPrice: 4950,
     isClothing: false,
     category: 'Fragrances',
-    sizes: [],
+    sizes: ['50ml', '100ml'],
+    attributes: {
+      name: 'Volume',
+      options: [
+        { name: '50ml', price: 4950, stock: 15 },
+        { name: '100ml', price: 7800, stock: 9 }
+      ]
+    },
     featured: true,
     stock: 24,
     imageUrl: 'https://images.unsplash.com/photo-1592945403244-b3fbafd7f539?auto=format&fit=crop&w=900&q=85',
@@ -53,7 +60,14 @@ const INITIAL_PRODUCTS = [
     discountPrice: 3650,
     isClothing: false,
     category: 'Fragrances',
-    sizes: [],
+    sizes: ['50ml', '100ml'],
+    attributes: {
+      name: 'Volume',
+      options: [
+        { name: '50ml', price: 3650, stock: 12 },
+        { name: '100ml', price: 5400, stock: 6 }
+      ]
+    },
     featured: true,
     stock: 18,
     imageUrl: 'https://images.unsplash.com/photo-1547887537-6158d64c35b3?auto=format&fit=crop&w=900&q=85',
@@ -68,6 +82,15 @@ const INITIAL_PRODUCTS = [
     isClothing: true,
     category: 'Apparel',
     sizes: ['S', 'M', 'L', 'XL'],
+    attributes: {
+      name: 'Size',
+      options: [
+        { name: 'S', price: null, stock: 5 },
+        { name: 'M', price: null, stock: 10 },
+        { name: 'L', price: null, stock: 7 },
+        { name: 'XL', price: null, stock: 3 }
+      ]
+    },
     featured: true,
     stock: 25,
     imageUrl: 'https://images.unsplash.com/photo-1556821840-3a63f95609a7?auto=format&fit=crop&w=900&q=85',
@@ -81,7 +104,15 @@ const INITIAL_PRODUCTS = [
     discountPrice: null,
     isClothing: false,
     category: 'Fragrances',
-    sizes: [],
+    sizes: ['30ml', '50ml', '100ml'],
+    attributes: {
+      name: 'Volume',
+      options: [
+        { name: '30ml', price: 2800, stock: 10 },
+        { name: '50ml', price: 3850, stock: 18 },
+        { name: '100ml', price: 5900, stock: 7 }
+      ]
+    },
     featured: false,
     stock: 35,
     imageUrl: 'https://images.unsplash.com/photo-1523293182086-7651a899d37f?auto=format&fit=crop&w=900&q=85',
@@ -95,7 +126,14 @@ const INITIAL_PRODUCTS = [
     discountPrice: 2450,
     isClothing: false,
     category: 'Gift Sets',
-    sizes: [],
+    sizes: ['Standard 5x10ml'],
+    attributes: {
+      name: 'Edition',
+      options: [
+        { name: 'Standard 5x10ml', price: 2450, stock: 25 },
+        { name: 'Deluxe Leather Case Edition', price: 3450, stock: 15 }
+      ]
+    },
     featured: false,
     stock: 40,
     imageUrl: 'https://images.unsplash.com/photo-1616949755610-8c9bbc08f138?auto=format&fit=crop&w=900&q=85',
@@ -110,6 +148,15 @@ const INITIAL_PRODUCTS = [
     isClothing: true,
     category: 'Apparel',
     sizes: ['S', 'M', 'L', 'XL'],
+    attributes: {
+      name: 'Size',
+      options: [
+        { name: 'S', price: null, stock: 8 },
+        { name: 'M', price: null, stock: 12 },
+        { name: 'L', price: null, stock: 6 },
+        { name: 'XL', price: null, stock: 4 }
+      ]
+    },
     featured: false,
     stock: 30,
     imageUrl: 'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?auto=format&fit=crop&w=900&q=85',
@@ -310,7 +357,7 @@ export default function App() {
     const rawOptions = product.attributes?.options && product.attributes.options.length > 0
       ? product.attributes.options
       : (product.sizes && product.sizes.length > 0
-          ? product.sizes.map((s) => ({ name: s, price: null }))
+          ? product.sizes.map((s) => ({ name: s, price: null, stock: null }))
           : []);
 
     let chosenOption = explicitOption || selectedSizes[product.id] || null;
@@ -331,13 +378,31 @@ export default function App() {
     const matchedOpt = rawOptions.find((o) => o.name === chosenOption);
     const effectivePrice = explicitPrice || (matchedOpt?.price && matchedOpt.price > 0 ? matchedOpt.price : (product.discountPrice || product.price));
 
+    // Stock verification
+    const isOptionStockTracked = matchedOpt && matchedOpt.stock !== null && matchedOpt.stock !== undefined;
+    const availableStock = isOptionStockTracked
+      ? Number(matchedOpt.stock)
+      : Number(product.stock !== undefined && product.stock !== null ? product.stock : 0);
+
+    if (availableStock <= 0) {
+      showToast(`Sorry, ${product.title}${chosenOption ? ` (${chosenOption})` : ''} is out of stock.`, 'error');
+      return;
+    }
+
     const cartItemId = chosenOption ? `${product.id}-${chosenOption}` : String(product.id);
 
+    // Check existing quantity in cart against available stock
+    const existing = cart.find((item) => item.cartItemId === cartItemId);
+    const currentQtyInCart = existing ? existing.qty : 0;
+    if (currentQtyInCart + qtyToAdd > availableStock) {
+      showToast(`Cannot add more. Only ${availableStock} unit(s) available in stock.`, 'error');
+      return;
+    }
+
     setCart((prev) => {
-      const existing = prev.find((item) => item.cartItemId === cartItemId);
       if (existing) {
         return prev.map((item) =>
-          item.cartItemId === cartItemId ? { ...item, qty: item.qty + qtyToAdd } : item
+          item.cartItemId === cartItemId ? { ...item, qty: item.qty + qtyToAdd, maxStock: availableStock } : item
         );
       }
       return [
@@ -353,7 +418,8 @@ export default function App() {
           isClothing: Boolean(product.isClothing),
           size: chosenOption,
           attributeName: product.attributes?.name || (product.isClothing ? 'Size' : 'Volume'),
-          qty: qtyToAdd
+          qty: qtyToAdd,
+          maxStock: availableStock
         }
       ];
     });
@@ -374,11 +440,15 @@ export default function App() {
   const handleUpdateCartQty = (cartItemId, delta) => {
     setCart((prev) =>
       prev
-        .map((item) =>
-          item.cartItemId === cartItemId
-            ? { ...item, qty: Math.max(0, item.qty + delta) }
-            : item
-        )
+        .map((item) => {
+          if (item.cartItemId !== cartItemId) return item;
+          const nextQty = item.qty + delta;
+          if (delta > 0 && item.maxStock !== undefined && item.maxStock !== null && nextQty > item.maxStock) {
+            showToast(`Cannot increase. Maximum available stock (${item.maxStock}) reached.`, 'error');
+            return item;
+          }
+          return { ...item, qty: Math.max(0, nextQty) };
+        })
         .filter((item) => item.qty > 0)
     );
   };

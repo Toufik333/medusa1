@@ -51,8 +51,8 @@ export default function ProductManager({
   const [attributeEnabled, setAttributeEnabled] = useState(true);
   const [attributeName, setAttributeName] = useState('Volume');
   const [attributeOptions, setAttributeOptions] = useState([
-    { id: 1, name: '50ml', price: '' },
-    { id: 2, name: '100ml', price: '' }
+    { id: 1, name: '50ml', price: '', stock: '15' },
+    { id: 2, name: '100ml', price: '', stock: '10' }
   ]);
 
   // 4:5 Image Cropper State
@@ -78,8 +78,8 @@ export default function ProductManager({
     setAttributeEnabled(true);
     setAttributeName('Volume');
     setAttributeOptions([
-      { id: 1, name: '50ml', price: '' },
-      { id: 2, name: '100ml', price: '' }
+      { id: 1, name: '50ml', price: '', stock: '15' },
+      { id: 2, name: '100ml', price: '', stock: '10' }
     ]);
     setRawImageUrl(SAMPLE_STOCK_PHOTOS[0].url);
     setCropZoom(1);
@@ -97,7 +97,7 @@ export default function ProductManager({
     setFormCategory(product.category || (product.isClothing ? 'Apparel' : 'Fragrances'));
     setFormSizes(product.isClothing && product.sizes?.length ? product.sizes : (product.isClothing ? ['S', 'M', 'L', 'XL'] : []));
     setFormFeatured(Boolean(product.featured));
-    setFormStock(String(product.stock || 20));
+    setFormStock(String(product.stock !== undefined && product.stock !== null ? product.stock : 0));
 
     // Populate custom attributes
     if (product.attributes && Array.isArray(product.attributes.options) && product.attributes.options.length > 0) {
@@ -107,7 +107,8 @@ export default function ProductManager({
         product.attributes.options.map((opt, idx) => ({
           id: idx + 1,
           name: typeof opt === 'object' ? opt.name : String(opt),
-          price: typeof opt === 'object' && opt.price ? String(opt.price) : ''
+          price: typeof opt === 'object' && opt.price ? String(opt.price) : '',
+          stock: typeof opt === 'object' && opt.stock !== undefined && opt.stock !== null ? String(opt.stock) : ''
         }))
       );
     } else if (product.isClothing && Array.isArray(product.sizes) && product.sizes.length > 0) {
@@ -117,7 +118,8 @@ export default function ProductManager({
         product.sizes.map((s, idx) => ({
           id: idx + 1,
           name: s,
-          price: ''
+          price: '',
+          stock: '10'
         }))
       );
     } else {
@@ -138,8 +140,8 @@ export default function ProductManager({
     setAttributeEnabled(true);
     setAttributeName('Volume');
     setAttributeOptions([
-      { id: 1, name: '50ml', price: '' },
-      { id: 2, name: '100ml', price: '' }
+      { id: 1, name: '50ml', price: '', stock: '15' },
+      { id: 2, name: '100ml', price: '', stock: '10' }
     ]);
     setFormIsClothing(false);
     setFormCategory('Fragrances');
@@ -149,10 +151,10 @@ export default function ProductManager({
     setAttributeEnabled(true);
     setAttributeName('Size');
     setAttributeOptions([
-      { id: 1, name: 'S', price: '' },
-      { id: 2, name: 'M', price: '' },
-      { id: 3, name: 'L', price: '' },
-      { id: 4, name: 'XL', price: '' }
+      { id: 1, name: 'S', price: '', stock: '5' },
+      { id: 2, name: 'M', price: '', stock: '10' },
+      { id: 3, name: 'L', price: '', stock: '8' },
+      { id: 4, name: 'XL', price: '', stock: '4' }
     ]);
     setFormIsClothing(true);
     setFormCategory('Apparel');
@@ -162,9 +164,9 @@ export default function ProductManager({
     setAttributeEnabled(true);
     setAttributeName('Bottle Size');
     setAttributeOptions([
-      { id: 1, name: '2ml Sample', price: '' },
-      { id: 2, name: '5ml Travel Spray', price: '' },
-      { id: 3, name: '10ml Decant', price: '' }
+      { id: 1, name: '2ml Sample', price: '', stock: '20' },
+      { id: 2, name: '5ml Travel Spray', price: '', stock: '15' },
+      { id: 3, name: '10ml Decant', price: '', stock: '10' }
     ]);
     setFormIsClothing(false);
     setFormCategory('Fragrances');
@@ -179,7 +181,7 @@ export default function ProductManager({
   const handleAddAttributeOption = () => {
     setAttributeOptions((prev) => [
       ...prev,
-      { id: Date.now(), name: '', price: '' }
+      { id: Date.now(), name: '', price: '', stock: '10' }
     ]);
   };
 
@@ -318,7 +320,8 @@ export default function ProductManager({
           .filter((opt) => opt.name && opt.name.trim().length > 0)
           .map((opt) => ({
             name: opt.name.trim(),
-            price: opt.price && !isNaN(Number(opt.price)) && Number(opt.price) > 0 ? Number(opt.price) : null
+            price: opt.price !== undefined && opt.price !== '' && !isNaN(Number(opt.price)) && Number(opt.price) > 0 ? Number(opt.price) : null,
+            stock: opt.stock !== undefined && opt.stock !== '' && !isNaN(Number(opt.stock)) ? Math.max(0, parseInt(opt.stock, 10)) : null
           }))
       : [];
 
@@ -338,6 +341,11 @@ export default function ProductManager({
         }
       : null;
 
+    const hasOptionStock = validOptions.some((o) => o.stock !== null);
+    const calculatedStock = hasOptionStock
+      ? validOptions.reduce((acc, o) => acc + (o.stock || 0), 0)
+      : (formStock !== '' && !isNaN(Number(formStock)) ? Math.max(0, parseInt(formStock, 10)) : 0);
+
     const payload = {
       title: formTitle.trim(),
       subtitle: formSubtitle.trim() || (isApparel ? 'Tailored Studio Apparel' : 'Everyday Studio Utility'),
@@ -348,7 +356,7 @@ export default function ProductManager({
       sizes: isApparel && validOptions.length > 0 ? validOptions.map((o) => o.name) : (formSizes.length > 0 ? formSizes : []),
       attributes: attributesPayload,
       featured: formFeatured,
-      stock: Number(formStock) || 15,
+      stock: calculatedStock,
       imageUrl: finalImg,
       cropMeta: finalCrop
     };
@@ -459,23 +467,23 @@ export default function ProductManager({
 
                   <div className="space-y-2">
                     <div className="flex items-center justify-between text-[11px] font-semibold text-neutral-700">
-                      <span>Options & Custom Pricing (৳)</span>
+                      <span>Variation Options, Custom Price (৳) & Stock</span>
                       <span className="text-[10px] text-neutral-400 font-normal">
-                        Leave price blank to use base price
+                        Per-variant stock & price
                       </span>
                     </div>
 
-                    <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+                    <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
                       {attributeOptions.map((opt) => (
                         <div key={opt.id} className="flex items-center gap-2">
                           <input
                             type="text"
                             value={opt.name}
                             onChange={(e) => handleUpdateOption(opt.id, 'name', e.target.value)}
-                            placeholder="Option name (e.g. 50ml, 100ml, XL)"
-                            className="flex-1 px-2.5 py-1.5 rounded-lg bg-white border border-neutral-300 text-xs focus:outline-none focus:border-neutral-950"
+                            placeholder="Option name (e.g. 50ml, 100ml)"
+                            className="flex-1 min-w-[100px] px-2.5 py-1.5 rounded-lg bg-white border border-neutral-300 text-xs focus:outline-none focus:border-neutral-950"
                           />
-                          <div className="relative w-32">
+                          <div className="relative w-28 shrink-0">
                             <span className="absolute left-2.5 top-1.5 text-xs text-neutral-400">৳</span>
                             <input
                               type="number"
@@ -484,18 +492,42 @@ export default function ProductManager({
                               onChange={(e) => handleUpdateOption(opt.id, 'price', e.target.value)}
                               placeholder={formDiscountPrice || formPrice || 'Base'}
                               className="w-full pl-6 pr-2 py-1.5 rounded-lg bg-white border border-neutral-300 text-xs focus:outline-none focus:border-neutral-950"
+                              title="Optional price override"
+                            />
+                          </div>
+                          <div className="relative w-24 shrink-0">
+                            <input
+                              type="number"
+                              min="0"
+                              value={opt.stock}
+                              onChange={(e) => handleUpdateOption(opt.id, 'stock', e.target.value)}
+                              placeholder="Stock"
+                              className={`w-full px-2.5 py-1.5 rounded-lg bg-white border text-xs focus:outline-none focus:border-neutral-950 ${
+                                opt.stock === '0' || opt.stock === 0 ? 'border-rose-300 bg-rose-50/50 text-rose-700 font-bold' : 'border-neutral-300'
+                              }`}
+                              title="Stock quantity for this variation (set 0 for out of stock)"
                             />
                           </div>
                           <button
                             type="button"
                             onClick={() => handleRemoveOption(opt.id)}
-                            className="p-1.5 rounded-lg text-neutral-400 hover:text-red-600 hover:bg-red-50 transition cursor-pointer"
+                            className="p-1.5 rounded-lg text-neutral-400 hover:text-red-600 hover:bg-red-50 transition cursor-pointer shrink-0"
                             title="Remove option"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
                           </button>
                         </div>
                       ))}
+                    </div>
+
+                    <div className="flex items-center justify-between pt-1">
+                      <span className="text-[10px] text-neutral-500">
+                        {attributeOptions.some((o) => o.stock !== '' && o.stock !== undefined) ? (
+                          <>Total variant stock: <strong>{attributeOptions.reduce((acc, o) => acc + (parseInt(o.stock, 10) || 0), 0)} units</strong></>
+                        ) : (
+                          <>Uses product base stock if variant stock is blank</>
+                        )}
+                      </span>
                     </div>
 
                     <button
@@ -883,8 +915,9 @@ export default function ProductManager({
             <thead>
               <tr className="border-b border-neutral-200 bg-neutral-50 text-neutral-500 uppercase tracking-wider text-[11px]">
                 <th className="py-3 px-4">Item (4:5)</th>
-                <th className="py-3 px-4">Type & Sizes</th>
+                <th className="py-3 px-4">Type, Variations & Variant Stock</th>
                 <th className="py-3 px-4">Pricing</th>
+                <th className="py-3 px-4">Total Stock</th>
                 <th className="py-3 px-4">Featured</th>
                 <th className="py-3 px-4 text-right">Actions</th>
               </tr>
@@ -916,15 +949,29 @@ export default function ProductManager({
                           {p.attributes.name || 'Attributes'}
                         </span>
                         <div className="flex flex-wrap items-center gap-1">
-                          {p.attributes.options.map((opt, i) => (
-                            <span
-                              key={i}
-                              className="px-1.5 py-0.5 rounded bg-neutral-100 border border-neutral-200 font-medium text-[10px]"
-                            >
-                              {typeof opt === 'object' ? opt.name : opt}
-                              {typeof opt === 'object' && opt.price ? ` (${formatPrice(opt.price)})` : ''}
-                            </span>
-                          ))}
+                          {p.attributes.options.map((opt, i) => {
+                            const optName = typeof opt === 'object' ? opt.name : opt;
+                            const optPrice = typeof opt === 'object' && opt.price ? ` (${formatPrice(opt.price)})` : '';
+                            const optStock = typeof opt === 'object' && opt.stock !== null && opt.stock !== undefined ? opt.stock : null;
+                            const isOptOut = optStock !== null && Number(optStock) <= 0;
+                            return (
+                              <span
+                                key={i}
+                                className={`px-1.5 py-0.5 rounded border text-[10px] font-medium ${
+                                  isOptOut
+                                    ? 'bg-rose-50 border-rose-200 text-rose-700'
+                                    : 'bg-neutral-100 border-neutral-200 text-neutral-800'
+                                }`}
+                              >
+                                {optName}{optPrice}
+                                {optStock !== null ? (
+                                  <span className={`ml-1 font-bold ${isOptOut ? 'text-rose-600' : 'text-neutral-500'}`}>
+                                    [{isOptOut ? 'OUT OF STOCK' : `${optStock} in stock`}]
+                                  </span>
+                                ) : ''}
+                              </span>
+                            );
+                          })}
                         </div>
                       </div>
                     ) : p.isClothing && p.sizes?.length ? (
@@ -959,6 +1006,21 @@ export default function ProductManager({
                       </div>
                     ) : (
                       <span className="font-bold">{formatPrice(p.price)}</span>
+                    )}
+                  </td>
+                  <td className="py-3 px-4">
+                    {p.stock <= 0 ? (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-700 border border-rose-200">
+                        Out of Stock (0)
+                      </span>
+                    ) : p.stock <= 5 ? (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-100 text-amber-800 border border-amber-200">
+                        Low Stock ({p.stock})
+                      </span>
+                    ) : (
+                      <span className="font-semibold text-neutral-800">
+                        {p.stock} units
+                      </span>
                     )}
                   </td>
                   <td className="py-3 px-4">

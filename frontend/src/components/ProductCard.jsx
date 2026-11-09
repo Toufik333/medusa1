@@ -29,6 +29,13 @@ export default function ProductCard({
     ? activeOption.price
     : basePrice;
 
+  // Dynamic stock calculation for active variant
+  const isOptionStockTracked = activeOption && activeOption.stock !== null && activeOption.stock !== undefined;
+  const currentStock = isOptionStockTracked
+    ? Number(activeOption.stock)
+    : Number(product.stock !== undefined && product.stock !== null ? product.stock : 0);
+  const isOutOfStock = currentStock <= 0;
+
   const hasDiscount = !activeOption?.price && product.discountPrice && product.discountPrice < product.price;
   const discountPct = hasDiscount
     ? Math.round(((product.price - product.discountPrice) / product.price) * 100)
@@ -55,7 +62,7 @@ export default function ProductCard({
             alt={product.title}
             cropMeta={product.cropMeta}
             featured={product.featured}
-            badge={hasDiscount ? `-${discountPct}% OFF` : null}
+            badge={isOutOfStock ? 'OUT OF STOCK' : (hasDiscount ? `-${discountPct}% OFF` : null)}
           />
           <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
             <span className="py-2 px-3.5 rounded-xl bg-white/95 text-neutral-950 font-semibold text-xs shadow-md flex items-center gap-1.5 backdrop-blur-xs">
@@ -70,9 +77,15 @@ export default function ProductCard({
             <span className="text-[11px] font-medium uppercase tracking-widest text-neutral-400">
               {product.category}
             </span>
-            <span className="text-[11px] text-neutral-400">
-              {product.stock} in stock
-            </span>
+            {isOutOfStock ? (
+              <span className="text-[11px] font-bold text-rose-600 bg-rose-50 px-2 py-0.5 rounded-full border border-rose-200">
+                Out of Stock
+              </span>
+            ) : (
+              <span className="text-[11px] text-neutral-400">
+                {currentStock} in stock
+              </span>
+            )}
           </div>
 
           <h3 className="font-semibold text-neutral-900 text-base leading-snug line-clamp-1 group-hover:text-amber-800 transition-colors font-serif">
@@ -122,12 +135,20 @@ export default function ProductCard({
               {activeOption && (
                 <span className="font-semibold text-neutral-900">
                   {activeOption.name}
+                  {isOptionStockTracked && (
+                    <span className={`ml-1 text-[10px] font-normal ${isOutOfStock ? 'text-rose-600 font-bold' : 'text-neutral-500'}`}>
+                      ({isOutOfStock ? 'Out' : `${currentStock} left`})
+                    </span>
+                  )}
                 </span>
               )}
             </div>
             <div className="flex flex-wrap gap-1.5">
               {rawOptions.map((opt) => {
                 const active = (selectedSize || rawOptions[0]?.name) === opt.name;
+                const optStockTracked = opt.stock !== null && opt.stock !== undefined;
+                const optOutOfStock = optStockTracked && Number(opt.stock) <= 0;
+
                 return (
                   <button
                     key={opt.name}
@@ -139,13 +160,20 @@ export default function ProductCard({
                     className={`py-1 px-2.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                       active
                         ? 'bg-neutral-950 text-white shadow-xs'
+                        : optOutOfStock
+                        ? 'bg-neutral-100 text-neutral-400 border border-dashed border-neutral-300 hover:border-neutral-400'
                         : 'bg-white text-neutral-700 border border-neutral-200 hover:border-neutral-400'
                     }`}
                   >
-                    <span>{opt.name}</span>
+                    <span className={optOutOfStock && !active ? 'line-through' : ''}>{opt.name}</span>
                     {opt.price && opt.price > 0 && (
                       <span className={`text-[10px] font-normal ml-1 ${active ? 'text-amber-300' : 'text-neutral-400'}`}>
                         ৳{opt.price}
+                      </span>
+                    )}
+                    {optOutOfStock && (
+                      <span className={`text-[9px] ml-1 font-bold ${active ? 'text-rose-300' : 'text-rose-600'}`}>
+                        (Out)
                       </span>
                     )}
                   </button>
@@ -162,15 +190,25 @@ export default function ProductCard({
 
         <button
           type="button"
+          disabled={isOutOfStock}
           onClick={(e) => {
             e.stopPropagation();
+            if (isOutOfStock) return;
             onAddToCart(product, activeOption?.name, 1, displayPrice);
           }}
-          className="w-full py-2.5 px-4 rounded-xl bg-neutral-950 text-white text-xs sm:text-sm font-medium flex items-center justify-center gap-2 hover:bg-neutral-800 active:scale-[0.99] transition-all cursor-pointer shadow-sm"
+          className={`w-full py-2.5 px-4 rounded-xl text-xs sm:text-sm font-medium flex items-center justify-center gap-2 transition-all shadow-sm ${
+            isOutOfStock
+              ? 'bg-neutral-200 text-neutral-400 border border-neutral-300 cursor-not-allowed shadow-none'
+              : 'bg-neutral-950 text-white hover:bg-neutral-800 active:scale-[0.99] cursor-pointer'
+          }`}
         >
           <ShoppingBag className="w-4 h-4" />
           <span>
-            {activeOption ? `Add (${activeOption.name}) to Bag` : 'Add to Bag'}
+            {isOutOfStock
+              ? 'Out of Stock'
+              : activeOption
+              ? `Add (${activeOption.name}) to Bag`
+              : 'Add to Bag'}
           </span>
         </button>
       </div>
