@@ -175,21 +175,8 @@ export default function App() {
   const [selectedSizes, setSelectedSizes] = useState({});
   const [sizePromptError, setSizePromptError] = useState(null);
 
-  // Cart & Checkout
-  const [cart, setCart] = useState([
-    {
-      cartItemId: '1-L',
-      productId: 1,
-      title: 'Heavyweight Oversized Hoodie',
-      price: 2650,
-      regularPrice: 3200,
-      imageUrl: 'https://images.unsplash.com/photo-1556821840-3a63f95609a7?auto=format&fit=crop&w=900&q=85',
-      cropMeta: { zoom: 1, panX: 0, panY: 0 },
-      isClothing: true,
-      size: 'L',
-      qty: 1
-    }
-  ]);
+  // Cart & Checkout (clean empty bag by default)
+  const [cart, setCart] = useState([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [couponInput, setCouponInput] = useState('');
   const [appliedCoupon, setAppliedCoupon] = useState(null);
@@ -226,7 +213,7 @@ export default function App() {
       api.getCampaign()
     ]);
 
-    if (prodRes.data && Array.isArray(prodRes.data) && prodRes.data.length > 0) {
+    if (prodRes.data && Array.isArray(prodRes.data)) {
       setProducts(prodRes.data);
     }
     if (coupRes.data && Array.isArray(coupRes.data)) {
@@ -428,25 +415,41 @@ export default function App() {
   const handleSaveProduct = async (editingId, payload) => {
     if (editingId) {
       const res = await api.updateProduct(editingId, payload);
-      const updated = res.data || { id: editingId, ...payload };
+      if (res.error) {
+        showToast(res.error, 'error');
+        return;
+      }
+      const updated = res.data;
       setProducts((prev) => prev.map((p) => (p.id === editingId ? updated : p)));
       showToast(`Updated "${payload.title}" with 4:5 aligned crop.`);
     } else {
       const res = await api.createProduct(payload);
-      const created = res.data || { id: Date.now(), ...payload };
+      if (res.error) {
+        showToast(res.error, 'error');
+        return;
+      }
+      const created = res.data;
       setProducts((prev) => [created, ...prev]);
       showToast(`Published "${payload.title}" to Storefront!`);
     }
   };
 
   const handleDeleteProduct = async (id) => {
-    await api.deleteProduct(id);
+    const res = await api.deleteProduct(id);
+    if (res.error) {
+      showToast(res.error, 'error');
+      return;
+    }
     setProducts((prev) => prev.filter((p) => p.id !== id));
     showToast('Product removed from store.');
   };
 
   const handleToggleFeatured = async (id) => {
-    await api.toggleFeatured(id);
+    const res = await api.toggleFeatured(id);
+    if (res.error) {
+      showToast(res.error, 'error');
+      return;
+    }
     setProducts((prev) =>
       prev.map((p) => (p.id === id ? { ...p, featured: !p.featured } : p))
     );
@@ -454,13 +457,21 @@ export default function App() {
 
   const handleCreateCoupon = async (payload) => {
     const res = await api.createCoupon(payload);
-    const created = res.data || { id: Date.now(), ...payload, active: true };
+    if (res.error) {
+      showToast(res.error, 'error');
+      return;
+    }
+    const created = res.data;
     setCoupons((prev) => [...prev, created]);
     showToast(`Created active coupon ${created.code} (${created.discountPercent}% OFF)`);
   };
 
   const handleToggleCoupon = async (id) => {
-    await api.toggleCoupon(id);
+    const res = await api.toggleCoupon(id);
+    if (res.error) {
+      showToast(res.error, 'error');
+      return;
+    }
     setCoupons((prev) =>
       prev.map((c) => {
         if (c.id === id) {
@@ -474,7 +485,11 @@ export default function App() {
   };
 
   const handleDeleteCoupon = async (id) => {
-    await api.deleteCoupon(id);
+    const res = await api.deleteCoupon(id);
+    if (res.error) {
+      showToast(res.error, 'error');
+      return;
+    }
     setCoupons((prev) => prev.filter((c) => c.id !== id));
     showToast('Coupon removed.');
   };

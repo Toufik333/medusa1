@@ -98,9 +98,8 @@ function validateProductPayload(req, res, next) {
     }
   }
 
-  const allowedCategories = ['Clothing', 'Accessories', 'Gear'];
-  if (category && !allowedCategories.includes(category)) {
-    return res.status(400).json({ error: `Category must be one of: ${allowedCategories.join(', ')}` });
+  if (category && (typeof category !== 'string' || category.trim().length === 0 || category.trim().length > 80)) {
+    return res.status(400).json({ error: 'Category must be a valid text string (max 80 chars)' });
   }
 
   next();
